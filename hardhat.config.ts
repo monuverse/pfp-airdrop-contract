@@ -4,20 +4,20 @@ import '@nomicfoundation/hardhat-toolbox';
 import * as dotenv from 'dotenv';
 
 // Tasks
-// import './tasks/deploy';
+import './tasks/deploy';
 
 dotenv.config();
 
 const config: HardhatUserConfig = {
     solidity: {
-        version: "0.8.15",
+        version: '0.8.15',
         settings: {
-          optimizer: {
-            enabled: true,
-            runs: 1000,
-          },
+            optimizer: {
+                enabled: true,
+                runs: 1000,
+            },
         },
-      },
+    },
 
     paths: {
         sources: './contracts',
@@ -51,6 +51,9 @@ const config: HardhatUserConfig = {
     etherscan: {
         apiKey: {
             goerli: process.env.ETHERSCAN_API_KEY
+                ? process.env.ETHERSCAN_API_KEY
+                : '',
+            rinkeby: process.env.ETHERSCAN_API_KEY
                 ? process.env.ETHERSCAN_API_KEY
                 : '',
         },
