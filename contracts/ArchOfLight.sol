@@ -1,19 +1,23 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.15;
+pragma solidity 0.8.16;
 
 import "erc721psi/contracts/ERC721Psi.sol";
 import "./ArchOfLightChaos.sol";
 
 import "fpe-map/contracts/FPEMap.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
+
+
 
 /// @title Monuverse: Arch of Light
 /// @author Maxim Gaina
 
 contract ArchOfLight is ERC721Psi, ArchOfLightChaos {
     using FPEMap for uint256;
+    using Strings for uint256;
 
-    uint256 private _maxSupply;
+    uint256 private _maxSupply = 7777;
 
     string private _archVeilURI;
     string private _archBaseURI;
@@ -31,14 +35,14 @@ contract ArchOfLight is ERC721Psi, ArchOfLightChaos {
         _archBaseURI = archBaseURI_;
     }
 
-    function mint(uint256 quantity) external {
+    function mint(uint256 quantity) external payable {
         _safeMint(msg.sender, quantity);
     }
 
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
         require(ERC721Psi._exists(tokenId), "ArchOfLight: non existent token");
 
-        uint256 seed = ArchOfLightChaos._seed();
+        uint256 seed = super._seed();
 
         return
             seed == 0
@@ -46,7 +50,7 @@ contract ArchOfLight is ERC721Psi, ArchOfLightChaos {
                 : string(
                     abi.encodePacked(
                         _baseURI(),
-                        FPEMap.fpeMappingFeistelAuto(tokenId, seed, _maxSupply)
+                        tokenId.fpeMappingFeistelAuto(seed, _maxSupply).toString()
                     )
                 );
     }
