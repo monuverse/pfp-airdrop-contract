@@ -31,7 +31,7 @@ contract ArchOfLight is ERC721Psi, ArchOfLightChaos {
         _archBaseURI = archBaseURI_;
     }
 
-    function mint(uint256 quantity) external payable {
+    function mint(uint256 quantity) external {
         _safeMint(msg.sender, quantity);
     }
 
