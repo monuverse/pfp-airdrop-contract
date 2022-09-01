@@ -8,8 +8,6 @@ import "fpe-map/contracts/FPEMap.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
-
-
 /// @title Monuverse: Arch of Light
 /// @author Maxim Gaina
 
@@ -42,7 +40,7 @@ contract ArchOfLight is ERC721Psi, ArchOfLightChaos {
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
         require(ERC721Psi._exists(tokenId), "ArchOfLight: non existent token");
 
-        uint256 seed = super._seed();
+        uint256 seed = ArchOfLightChaos._seed();
 
         return
             seed == 0
@@ -50,7 +48,7 @@ contract ArchOfLight is ERC721Psi, ArchOfLightChaos {
                 : string(
                     abi.encodePacked(
                         _baseURI(),
-                        tokenId.fpeMappingFeistelAuto(seed, _maxSupply).toString()
+                        tokenId.fpeMappingFeistelAuto(seed, ERC721Psi._minted).toString()
                     )
                 );
     }
@@ -59,7 +57,7 @@ contract ArchOfLight is ERC721Psi, ArchOfLightChaos {
         return _archBaseURI;
     }
 
-    function unveilArch() public onlyOwner {
+    function unveil() public onlyOwner {
         ArchOfLightChaos._requestRandomWord();
     }
 }

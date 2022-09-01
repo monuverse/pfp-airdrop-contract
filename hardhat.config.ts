@@ -19,6 +19,10 @@ const config: HardhatUserConfig = {
         },
     },
 
+    mocha: {
+        timeout: 100000,
+    },
+
     paths: {
         sources: './contracts',
         tests: './test',

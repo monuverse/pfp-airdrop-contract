@@ -5,10 +5,12 @@ import { Contract, BigNumber } from 'ethers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
 describe('ArchOfLight Contract', () => {
-    let owner: SignerWithAddress;
+    // Actors that will interact with Smartcontracts
+    let monuverse: SignerWithAddress;
     let hacker: SignerWithAddress;
     let users: SignerWithAddress[];
 
+    // Chainlink VRF V2
     const vrfSubscriptionId: number = 1;
     const vrfGaslane: Buffer = Buffer.from(
         'd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc',
@@ -16,14 +18,16 @@ describe('ArchOfLight Contract', () => {
     );
     let vrfCoordinatorV2Mock: Contract;
 
+    // Arch Of Light
     const name: string = 'Monutest';
     const symbol: string = 'MNT';
-    const veilURI: string = 'veil:test';
-    const baseURI: string = 'unveil:test';
+    const veilURI: string = 'test:veilURI_unique';
+    const baseURI: string = 'test:baseURI_';
+    const maxSupply: number = 77;
     let archOfLight: Contract;
 
     before(async () => {
-        [owner, hacker, ...users] = await ethers.getSigners();
+        [monuverse, hacker, ...users] = await ethers.getSigners();
 
         const VRFCoordinatorV2Mock = await ethers.getContractFactory(
             'VRFCoordinatorV2Mock'
@@ -54,40 +58,72 @@ describe('ArchOfLight Contract', () => {
         );
     });
 
-    it('MUST allow multiple users to mint tokens', async () => {
-        await (await archOfLight.connect(users[0]).mint(3)).wait();
-        await (await archOfLight.connect(users[1]).mint(6)).wait();
-        await (await archOfLight.connect(users[2]).mint(2)).wait();
-
-        expect(await archOfLight.balanceOf(users[2].address)).to.equal(2);
-        expect(await archOfLight.tokenURI(0)).to.equal(veilURI);
+    beforeEach(async () => {
+        await archOfLight.connect(monuverse);
     });
 
-    // it('Contract should request Random numbers successfully', async () => {
-    //     await expect(archOfLight.connect(owner).unveilArch())
-    //         .to.emit(archOfLight, 'RequestedRandomness')
-    //         .withArgs(BigNumber.from(1), owner.address, 'Halley');
-    // });
+    context('Before Reveal', () => {
+        it('MUST allow all users to mint multiple tokens at once', async () => {
+            const userAllocation = Math.floor(maxSupply / users.length);
 
-    // it('Coordinator should successfully receive the request', async function () {
-    //     await expect(archOfLight.safeMint('Halley')).to.emit(
-    //         vrfCoordinatorV2Mock,
-    //         'RandomWordsRequested'
-    //     );
-    // });
+            for (let i: number = 0; i < users.length; i++) {
+                await (
+                    await archOfLight.connect(users[i]).mint(userAllocation)
+                ).wait();
 
-    it('MUST perform a token reveal', async () => {
-        await (await archOfLight.connect(owner).unveilArch()).wait();
+                expect(await archOfLight.balanceOf(users[i].address)).to.equal(
+                    userAllocation
+                );
+            }
+        });
 
-        await expect(archOfLight.safeMint('Halley')).to.emit(
-            vrfCoordinatorV2Mock,
-            'RandomWordsRequested'
-        );
-        // await new Promise((resolve) => setTimeout(resolve, 5000));
+        it('MUST only show veiled arch', async () => {
+            const totalSupply: number = await archOfLight.totalSupply();
 
-        const uri = await archOfLight.tokenURI(6);
-        console.log(uri);
+            for (let i: number = 0; i < totalSupply; i++) {
+                expect(await archOfLight.tokenURI(i)).to.equal(veilURI);
+            }
+        });
 
-        expect(uri).to.not.equal(veilURI);
+        it('MUST unveil successfully (i.e. receive randomness successfully)', async () => {
+            const requestId: BigNumber = BigNumber.from(1);
+
+            await expect(archOfLight.unveil())
+                .to.emit(archOfLight, 'RandomnessRequested')
+                .withArgs(requestId)
+                .and.to.emit(vrfCoordinatorV2Mock, 'RandomWordsRequested');
+
+            await expect(
+                vrfCoordinatorV2Mock.fulfillRandomWords(
+                    requestId,
+                    archOfLight.address
+                )
+            ).to.emit(vrfCoordinatorV2Mock, 'RandomWordsFulfilled');
+        });
+    });
+
+    context('After Reveal', () => {
+        it('MUST show each token as unveiled Arch of Light', async () => {
+            const totalSupply: number = await archOfLight.totalSupply();
+
+            let mappedMetadataIds: Set<number> = new Set<number>();
+
+            for (let i: number = 0; i < totalSupply; i++) {
+                const tokenURI: string = await archOfLight.tokenURI(i);
+                expect(tokenURI.startsWith(baseURI)).to.be.true;
+                expect(tokenURI.length).to.be.greaterThan(baseURI.length);
+
+                const mappedMetadataId: number = Number(
+                    tokenURI.slice(baseURI.length)
+                );
+                expect(mappedMetadataId).to.not.be.NaN;
+                expect(mappedMetadataIds.has(mappedMetadataId)).to.be.false;
+
+                mappedMetadataIds.add(mappedMetadataId);
+            }
+
+            expect(Math.min(...mappedMetadataIds)).to.equal(0);
+            expect(Math.max(...mappedMetadataIds)).to.equal(totalSupply - 1);
+        });
     });
 });
