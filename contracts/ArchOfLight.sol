@@ -2,25 +2,28 @@
 pragma solidity 0.8.16;
 
 import "erc721psi/contracts/ERC721Psi.sol";
-import "./ArchOfLightChaos.sol";
+import "./MonuverseCollectionStory.sol";
+import "./MonuverseWhitelist.sol";
+import "./MonuverseEntropy.sol";
 
 import "fpe-map/contracts/FPEMap.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 
 /// @title Monuverse: Arch of Light
 /// @author Maxim Gaina
 
-contract ArchOfLight is ERC721Psi, ArchOfLightChaos {
+contract ArchOfLight is ERC721Psi, MonuverseEntropy, MonuverseWhitelist, MonuverseCollectionStory {
     using FPEMap for uint256;
     using Strings for uint256;
 
-    uint256 private _maxSupply = 7777;
+    uint256 private immutable _maxSupply;
 
     string private _archVeilURI;
     string private _archBaseURI;
 
     constructor(
+        uint256 maxSupply_,
         string memory name_,
         string memory symbol_,
         string memory archVeilURI_,
@@ -28,7 +31,8 @@ contract ArchOfLight is ERC721Psi, ArchOfLightChaos {
         address vrfCoordinator_,
         bytes32 vrfGasLane_,
         uint64 vrfSubscriptionId_
-    ) ERC721Psi(name_, symbol_) ArchOfLightChaos(vrfCoordinator_, vrfGasLane_, vrfSubscriptionId_) {
+    ) ERC721Psi(name_, symbol_) MonuverseEntropy(vrfCoordinator_, vrfGasLane_, vrfSubscriptionId_) {
+        _maxSupply = maxSupply_;
         _archVeilURI = archVeilURI_;
         _archBaseURI = archBaseURI_;
     }
@@ -40,7 +44,7 @@ contract ArchOfLight is ERC721Psi, ArchOfLightChaos {
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
         require(ERC721Psi._exists(tokenId), "ArchOfLight: non existent token");
 
-        uint256 seed = ArchOfLightChaos._seed();
+        uint256 seed = MonuverseEntropy._seed();
 
         return
             seed == 0
@@ -58,7 +62,10 @@ contract ArchOfLight is ERC721Psi, ArchOfLightChaos {
     }
 
     function unveil() public onlyOwner {
-        ArchOfLightChaos._requestRandomWord();
+        // require current revealing == true
+
+        require(MonuverseEntropy._seed() == 0, "ArchOfLight: Arch already unveiled");
+        MonuverseEntropy._requestRandomWord();
     }
 }
 

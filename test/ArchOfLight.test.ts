@@ -1,4 +1,4 @@
-import { assert, expect } from 'chai';
+import { expect } from 'chai';
 
 import { ethers } from 'hardhat';
 import { Contract, BigNumber } from 'ethers';
@@ -42,6 +42,7 @@ describe('ArchOfLight Contract', () => {
 
         const ArchOfLight = await ethers.getContractFactory('ArchOfLight');
         archOfLight = await ArchOfLight.deploy(
+            maxSupply,
             name,
             symbol,
             veilURI,
@@ -125,5 +126,10 @@ describe('ArchOfLight Contract', () => {
             expect(Math.min(...mappedMetadataIds)).to.equal(0);
             expect(Math.max(...mappedMetadataIds)).to.equal(totalSupply - 1);
         });
+
+        it('MUST NOT allow another unveil');
     });
 });
+
+// dfa
+//

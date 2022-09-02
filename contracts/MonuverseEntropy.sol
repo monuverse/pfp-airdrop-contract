@@ -6,7 +6,7 @@ import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract ArchOfLightChaos is VRFConsumerBaseV2, Ownable {
+contract MonuverseEntropy is VRFConsumerBaseV2, Ownable {
     VRFCoordinatorV2Interface private immutable _coordinator;
 
     struct VRFRequestParams {
