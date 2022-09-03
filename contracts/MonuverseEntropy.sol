@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.16;
 
+import "./MonuverseCollectionStory.sol";
+
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract MonuverseEntropy is VRFConsumerBaseV2, Ownable {
+contract MonuverseEntropy is MonuverseCollectionStory, VRFConsumerBaseV2, Ownable {
     VRFCoordinatorV2Interface private immutable _coordinator;
 
     struct VRFRequestParams {
@@ -18,7 +20,7 @@ contract MonuverseEntropy is VRFConsumerBaseV2, Ownable {
     }
 
     VRFRequestParams private _vrfRequestParams;
-    uint256[] public _randomWords;
+    uint256 private _seed;
 
     event RandomnessRequested(uint256 requestId);
 
@@ -27,7 +29,7 @@ contract MonuverseEntropy is VRFConsumerBaseV2, Ownable {
         bytes32 gasLane_,
         uint64 subscriptionId_
     ) VRFConsumerBaseV2(coordinator_) {
-        _randomWords = new uint256[](1);
+        _seed = 0;
         _coordinator = VRFCoordinatorV2Interface(coordinator_);
         _vrfRequestParams = VRFRequestParams(gasLane_, subscriptionId_, 5, 300000, 1);
     }
@@ -48,8 +50,8 @@ contract MonuverseEntropy is VRFConsumerBaseV2, Ownable {
     function fulfillRandomWords(
         uint256, /* requestId */
         uint256[] memory randomWords
-    ) internal override {
-        _randomWords = randomWords;
+    ) internal override couldCloseRevealingChapter {
+        _seed = randomWords[0];
     }
 
     function updateVRFParams(
@@ -66,7 +68,7 @@ contract MonuverseEntropy is VRFConsumerBaseV2, Ownable {
         _vrfRequestParams.numWords = numWords;
     }
 
-    function _seed() internal view returns (uint256) {
-        return _randomWords[0];
+    function seed() internal view returns (uint256) {
+        return _seed;
     }
 }

@@ -17,36 +17,49 @@ contract MonuverseCollectionStory {
         mapping(bytes32 => MintRule) rules;
     }
 
-    struct Epoch {
+    struct Chapter {
         string label;
-        bool configuring;
         bool whitelisting;
         Minting minting;
         bool revealing;
     }
 
-    /// @notice A collection has a story made of epochs
+    /// @notice A collection has a story made of chapters
     DFA.Dfa private _story;
 
-    /// @notice Each epoch enables the collection to perform in a desired manner
-    mapping(bytes32 => Epoch) private _epochs;
+    /// @notice Each chapter enables the collection to perform in a desired manner
+    mapping(bytes32 => Chapter) private _chapters;
 
     bytes32 private _current;
 
-    event CollectionMinted(bytes32 prev, bytes32 current);
+    event AllocationMinted(bytes32 prev, bytes32 current);
+
     event CollectionRevealed(bytes32 prev, bytes32 current);
 
-    modifier canCloseEpochByReveal() {
+    modifier alongMintingChapter() {
+        require(_chapters[_current].minting.allocation != 0, "MCStory: minting not allowed");
         _;
-        if (_epochs[_current].revealing) {
-            bytes32 prev = _current;
-            bytes32 current = _story.transition(_current, CollectionRevealed.selector);
+    }
 
-            if (prev != current) {
-                _current = current;
-            }
+    modifier couldCloseMintingChapter() {
+        _;
+    }
 
-            emit CollectionRevealed(prev, current);
+    modifier alongRevealingChapter() {
+        require(_chapters[_current].revealing, "MCStory: revealing not allowed");
+        _;
+    }
+
+    modifier couldCloseRevealingChapter() {
+        _;
+
+        bytes32 prev = _current;
+        bytes32 current = _story.transition(prev, CollectionRevealed.selector);
+
+        if (prev != current) {
+            _current = current;
         }
+
+        emit CollectionRevealed(prev, current);
     }
 }
