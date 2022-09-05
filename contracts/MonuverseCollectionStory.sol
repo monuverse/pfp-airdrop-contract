@@ -1,28 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.16;
 
+import "./IMonuverseCollectionStory.sol";
 import "./DFA.sol";
 
-contract MonuverseCollectionStory {
+abstract contract MonuverseCollectionStory is IMonuverseCollectionStory {
     using DFA for DFA.Dfa;
-
-    struct MintRule {
-        bool disabled;
-        bool fixedPrice;
-    }
-
-    struct Minting {
-        uint256 allocation;
-        uint256 price;
-        mapping(bytes32 => MintRule) rules;
-    }
-
-    struct Chapter {
-        string label;
-        bool whitelisting;
-        Minting minting;
-        bool revealing;
-    }
 
     /// @notice A collection has a story made of chapters
     DFA.Dfa private _story;
@@ -32,16 +15,18 @@ contract MonuverseCollectionStory {
 
     bytes32 private _current;
 
-    event AllocationMinted(bytes32 prev, bytes32 current);
-
-    event CollectionRevealed(bytes32 prev, bytes32 current);
-
-    modifier alongMintingChapter() {
-        require(_chapters[_current].minting.allocation != 0, "MCStory: minting not allowed");
+    modifier mintingChaptersOnly() {
+        require(_chapters[_current].minting.allocation > 0, "MCStory: minting not allowed");
         _;
     }
 
-    modifier couldCloseMintingChapter() {
+    modifier mintingAllocation(uint256 minted, uint256 quantity, bytes32 group) {
+        if (!_chapters[_current].minting.rules[group].fixedPrice) {
+        }
+        _;
+    }
+
+    modifier couldCloseMintingChapter(uint256 minted) {
         _;
     }
 
@@ -62,4 +47,5 @@ contract MonuverseCollectionStory {
 
         emit CollectionRevealed(prev, current);
     }
+
 }
