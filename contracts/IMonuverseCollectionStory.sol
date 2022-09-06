@@ -35,7 +35,6 @@ interface IMonuverseCollectionStory {
     event ChapterAllocationMinted(bytes32 prev, bytes32 current);
     event CollectionRevealed(bytes32 prev, bytes32 current);
 
-
     function writeChapter(
         string calldata label,
         bool whitelisting,

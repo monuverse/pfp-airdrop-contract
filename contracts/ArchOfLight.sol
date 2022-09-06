@@ -40,7 +40,11 @@ contract ArchOfLight is ERC721Psi, MonuverseEntropy, MonuverseWhitelist {
         _archBaseURI = archBaseURI_;
     }
 
-    function mint(uint256 quantity) external payable alongMintingChapter couldCloseMintingChapter {
+    function mint(uint256 quantity)
+        external
+        payable
+        constrainedByMintingChapters(_minted, quantity, _maxSupply)
+    {
         _safeMint(msg.sender, quantity);
     }
 
@@ -55,7 +59,7 @@ contract ArchOfLight is ERC721Psi, MonuverseEntropy, MonuverseWhitelist {
                 : string(
                     abi.encodePacked(
                         _archBaseURI,
-                        tokenId.fpeMappingFeistelAuto(seed, ERC721Psi._minted).toString()
+                        tokenId.fpeMappingFeistelAuto(seed, _maxSupply).toString()
                     )
                 );
     }
