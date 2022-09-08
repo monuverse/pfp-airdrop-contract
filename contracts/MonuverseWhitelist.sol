@@ -7,13 +7,17 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract MonuverseWhitelist is Ownable {
     bytes32 private _whitelistRoot;
 
-    // modifier onlyWhitelisted(bytes32[] calldata proof, uint256 allowance) {
-    //     require(
-    //         isAccountWhitelisted(_msgSender(), allowance, proof, chapter),
-    //         "MonuverseWhitelist: caller is not whitelisted"
-    //     );
-    //     _;
-    // }
+    modifier onlyWhitelisted(
+        string calldata chapter,
+        uint256 quantity,
+        bytes32[] calldata proof
+    ) {
+        require(
+            isAccountWhitelisted(_msgSender(), quantity, chapter, proof),
+            "MonuverseWhitelist: caller is not whitelisted"
+        );
+        _;
+    }
 
     // constructor() {
     //     _whitelistRoot = whitelistRoot_;
@@ -29,8 +33,8 @@ contract MonuverseWhitelist is Ownable {
 
     function isAccountWhitelisted(
         address account,
-        uint256 allowedQuantity,
-        bytes32 chapter,
+        uint256 quantity,
+        string calldata chapter,
         bytes32[] calldata proof
     ) public view returns (bool) {
         require(
@@ -42,15 +46,15 @@ contract MonuverseWhitelist is Ownable {
             MerkleProof.verify(
                 proof,
                 _whitelistRoot,
-                generateWhitelistLeaf(account, allowedQuantity, chapter)
+                generateWhitelistLeaf(account, quantity, chapter)
             );
     }
 
     function generateWhitelistLeaf(
         address account,
-        uint256 allowedQuantity,
-        bytes32 chapter
+        uint256 quantity,
+        string calldata chapter
     ) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(account, allowedQuantity, chapter));
+        return keccak256(abi.encodePacked(account, quantity, chapter));
     }
 }

@@ -8,7 +8,7 @@ import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract MonuverseEntropy is MonuverseCollectionStory, VRFConsumerBaseV2, Ownable {
+contract MonuverseEntropy is MonuverseCollectionStory, VRFConsumerBaseV2 {
     VRFCoordinatorV2Interface private immutable _coordinator;
 
     struct VRFRequestParams {
@@ -50,7 +50,7 @@ contract MonuverseEntropy is MonuverseCollectionStory, VRFConsumerBaseV2, Ownabl
     function fulfillRandomWords(
         uint256, /* requestId */
         uint256[] memory randomWords
-    ) internal override couldCloseRevealingChapter {
+    ) internal override couldQuitRevealingChapter {
         _seed = randomWords[0];
     }
 

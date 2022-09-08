@@ -2,15 +2,14 @@
 pragma solidity 0.8.16;
 
 import "erc721psi/contracts/ERC721Psi.sol";
-import "./MonuverseCollectionStory.sol";
-import "./MonuverseWhitelist.sol";
 import "./MonuverseEntropy.sol";
+import "./MonuverseWhitelist.sol";
 
 import "fpe-map/contracts/FPEMap.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 
-/// @title Monuverse: Arch of Light
+/// @title Monuverse: Arch of Peace
 /// @author Maxim Gaina
 
 contract ArchOfLight is ERC721Psi, MonuverseEntropy, MonuverseWhitelist {
@@ -40,13 +39,25 @@ contract ArchOfLight is ERC721Psi, MonuverseEntropy, MonuverseWhitelist {
         _archBaseURI = archBaseURI_;
     }
 
-    function mint(uint256 quantity)
+    function mint(uint256 quantity, string calldata group, bytes32[] calldata proof)
         external
         payable
-        constrainedByMintingChapters(_minted, quantity, _maxSupply)
+        onlyWhitelisted(group, quantity, proof)
+        onlyCurrentPriceMatches(group, quantity, msg.value)
+        // obeysMonuverseMintingLaws()
+        onlyDuringMintingChapters(_minted, quantity)
+        couldQuitMintingChapter(_minted, quantity)
     {
-        _safeMint(msg.sender, quantity);
+        // last chapter user can only mint what has remained
+        // should probably do `restrictedByMintingChapter`
+        // or `obeysMonuverseMintingLaws`
+        // or `encapsulatedByMintingChapterLogic`
+        // or `regulatedByMintingRules`
+
+        super._safeMint(msg.sender, quantity);
     }
+
+    function mint(uint256 quantity) external payable {}
 
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
         require(ERC721Psi._exists(tokenId), "ArchOfLight: non existent token");
@@ -64,7 +75,7 @@ contract ArchOfLight is ERC721Psi, MonuverseEntropy, MonuverseWhitelist {
                 );
     }
 
-    function reveal() public alongRevealingChapter {
+    function reveal() public onlyDuringRevealingChapters {
         require(MonuverseEntropy.seed() == 0, "ArchOfLight: already revealed");
         MonuverseEntropy._requestRandomWord();
     }

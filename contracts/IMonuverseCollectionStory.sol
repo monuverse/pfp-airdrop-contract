@@ -3,7 +3,7 @@ pragma solidity >=0.8.0 <0.9.0;
 
 interface IMonuverseCollectionStory {
     struct MintingGroupRules {
-        bool disabled;
+        bool enabled;
         bool fixedPrice;
     }
 
@@ -19,7 +19,7 @@ interface IMonuverseCollectionStory {
         bool revealing;
     }
 
-    /// @notice Story configuration Events
+    /// @notice Story Configuration Events
     event ChapterWritten(
         string label,
         bool whitelisting,
@@ -28,10 +28,10 @@ interface IMonuverseCollectionStory {
         uint256 price
     );
     event ChapterRemoved(string label);
-    event ChapterMintingUpdated(string label, uint256 allocation, uint256 price);
-    event ChapterMintingGroupUpdated(string label, string groupLabel, bool fixedPrice);
+    event ChapterMintingGroupWritten(string label, string groupLabel, bool fixedPrice);
+    event ChapterMintingGroupRemoved(string label, string groupLabel);
 
-    /// @notice Story narrating Events
+    /// @notice Story State-Transitioning Events
     event ChapterAllocationMinted(bytes32 prev, bytes32 current);
     event CollectionRevealed(bytes32 prev, bytes32 current);
 
@@ -45,16 +45,11 @@ interface IMonuverseCollectionStory {
 
     function removeChapter(string calldata label) external;
 
-    function updateChapterMinting(
-        string calldata label,
-        uint256 allocation,
-        uint256 price
-    ) external;
-
-    function updateChapterMintingGroup(
+    /// @notice 0x00 is the label of the public
+    function writeChapterMintingGroup(
         string calldata label,
         string calldata groupLabel,
-        bool fixedPrice
+        MintingGroupRules calldata mintingRules
     ) external;
 
     function removeChapterMintingGroup(string calldata label, string calldata groupLabel) external;
