@@ -23,7 +23,9 @@ contract MonuverseCollectionStory is IMonuverseCollectionStory, Ownable {
         // This single require checks for two conditions at once:
         // (a) if minting allowed at all (current chapter allocation > 0), and
         // (b) if current chapter allocation is full (i.e. no chapter transition occurred)
+
         // require(_chapters[_current].minting.allocation > supply, "MCStory: minting not allowed");
+
         require(_chapters[_current].minting.allocation > 0, "MCStory: minting not allowed");
 
         _;
@@ -71,9 +73,11 @@ contract MonuverseCollectionStory is IMonuverseCollectionStory, Ownable {
         }
     }
 
-    function _tryQuitMintingChapter() internal {
-        (bytes32 prev, bytes32 current) = tryTransition(ChapterAllocationMinted.selector);
-        emit ChapterAllocationMinted(prev, current);
+    function _tryQuitMintingChapter(uint256 minted) internal {
+        if (_availableAllocation(minted) == 0) {
+            (bytes32 prev, bytes32 current) = tryTransition(ChapterAllocationMinted.selector);
+            emit ChapterAllocationMinted(prev, current);
+        }
     }
 
     modifier onlyDuringRevealingChapters() {

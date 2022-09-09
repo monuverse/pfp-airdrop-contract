@@ -40,13 +40,18 @@ contract ArchOfLight is ERC721Psi, MonuverseEntropy, MonuverseWhitelist {
     }
 
     /// @dev quantity greater than 0 is already required by ERC721Psi
-    function mint(uint256 quantity, string calldata group, bytes32[] calldata proof)
+    function mint(
+        uint256 quantity,
+        string calldata group,
+        bytes32[] calldata proof
+    )
         external
         payable
         onlyWhitelisted(group, quantity, proof)
-        onlyDuringMintingChapters
+        onlyDuringMintingChapters // onlyChaptersWithMintingAllocation
         onlyChapterMintingGroups(group)
         onlyChapterMatchingPrices(group, quantity, msg.value)
+        // canShiftChapter(new unit256[](_minted))
         returns (uint256)
     {
         uint256 allocation = _availableAllocation(_minted);
@@ -57,10 +62,9 @@ contract ArchOfLight is ERC721Psi, MonuverseEntropy, MonuverseWhitelist {
         quantity -= balanceOf(_msgSender());
 
         _safeMint(_msgSender(), quantity);
+        _tryQuitMintingChapter();
 
-        if (_availableAllocation(_minted) == 0) {
-            _tryQuitMintingChapter();
-        }
+        // story._postMintingActions()
 
         return quantity;
     }
