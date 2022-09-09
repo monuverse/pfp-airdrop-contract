@@ -39,25 +39,31 @@ contract ArchOfLight is ERC721Psi, MonuverseEntropy, MonuverseWhitelist {
         _archBaseURI = archBaseURI_;
     }
 
+    /// @dev quantity greater than 0 is already required by ERC721Psi
     function mint(uint256 quantity, string calldata group, bytes32[] calldata proof)
         external
         payable
         onlyWhitelisted(group, quantity, proof)
-        onlyCurrentPriceMatches(group, quantity, msg.value)
-        // obeysMonuverseMintingLaws()
-        onlyDuringMintingChapters(_minted, quantity)
-        couldQuitMintingChapter(_minted, quantity)
+        onlyDuringMintingChapters
+        onlyChapterMintingGroups(group)
+        onlyChapterMatchingPrices(group, quantity, msg.value)
+        returns (uint256)
     {
-        // last chapter user can only mint what has remained
-        // should probably do `restrictedByMintingChapter`
-        // or `obeysMonuverseMintingLaws`
-        // or `encapsulatedByMintingChapterLogic`
-        // or `regulatedByMintingRules`
+        uint256 allocation = _availableAllocation(_minted);
+        if (quantity > allocation) {
+            quantity = allocation;
+        }
 
-        super._safeMint(msg.sender, quantity);
+        quantity -= balanceOf(_msgSender());
+
+        _safeMint(_msgSender(), quantity);
+
+        if (_availableAllocation(_minted) == 0) {
+            _tryQuitMintingChapter();
+        }
+
+        return quantity;
     }
-
-    function mint(uint256 quantity) external payable {}
 
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
         require(ERC721Psi._exists(tokenId), "ArchOfLight: non existent token");

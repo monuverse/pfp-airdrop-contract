@@ -1,4 +1,4 @@
-//SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.16;
 
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
@@ -14,21 +14,13 @@ contract MonuverseWhitelist is Ownable {
     ) {
         require(
             isAccountWhitelisted(_msgSender(), quantity, chapter, proof),
-            "MonuverseWhitelist: caller is not whitelisted"
+            "MonuverseWhitelist: caller not whitelisted"
         );
         _;
     }
 
-    // constructor() {
-    //     _whitelistRoot = whitelistRoot_;
-    // }
-
     function setWhitelistRoot(bytes32 newWhitelistRoot) public onlyOwner {
         _whitelistRoot = newWhitelistRoot;
-    }
-
-    function whitelistRoot() public view returns (bytes32) {
-        return _whitelistRoot;
     }
 
     function isAccountWhitelisted(
@@ -39,7 +31,7 @@ contract MonuverseWhitelist is Ownable {
     ) public view returns (bool) {
         require(
             owner() == _msgSender() || account == _msgSender(),
-            "Not allowed to check other users"
+            "MonuverseWhitelist: not allowed to check other users"
         );
 
         return
@@ -48,6 +40,10 @@ contract MonuverseWhitelist is Ownable {
                 _whitelistRoot,
                 generateWhitelistLeaf(account, quantity, chapter)
             );
+    }
+
+    function whitelistRoot() public view returns (bytes32) {
+        return _whitelistRoot;
     }
 
     function generateWhitelistLeaf(

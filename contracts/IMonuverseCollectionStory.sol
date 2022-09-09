@@ -43,14 +43,14 @@ interface IMonuverseCollectionStory {
         uint256 price
     ) external;
 
-    function removeChapter(string calldata label) external;
-
     /// @notice 0x00 is the label of the public
     function writeChapterMintingGroup(
         string calldata label,
         string calldata groupLabel,
         MintingGroupRules calldata mintingRules
     ) external;
+
+    function removeChapter(string calldata label) external;
 
     function removeChapterMintingGroup(string calldata label, string calldata groupLabel) external;
 }
