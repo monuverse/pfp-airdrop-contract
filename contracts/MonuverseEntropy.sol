@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.16;
 
-import "./MonuverseCollectionStory.sol";
+import "./MonuverseEpisode.sol";
 
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract MonuverseEntropy is MonuverseCollectionStory, VRFConsumerBaseV2 {
+contract MonuverseEntropy is MonuverseEpisode, VRFConsumerBaseV2 {
     VRFCoordinatorV2Interface private immutable _coordinator;
 
     struct VRFRequestParams {

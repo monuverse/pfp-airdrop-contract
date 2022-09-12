@@ -2,6 +2,7 @@
 pragma solidity 0.8.16;
 
 import "erc721psi/contracts/ERC721Psi.sol";
+import "./MonuverseEpisode.sol";
 import "./MonuverseEntropy.sol";
 import "./MonuverseWhitelist.sol";
 
@@ -9,10 +10,37 @@ import "fpe-map/contracts/FPEMap.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 
-/// @title Monuverse: Arch of Peace
-/// @author Maxim Gaina
 
-contract ArchOfLight is ERC721Psi, MonuverseEntropy, MonuverseWhitelist {
+/**
+ * @title Monuverse: Arch of Peace
+ * @author Maxim Gaina
+
+                    └╬┘░.       .<░└╬┘░>.       .░└╬┘
+                  ──══──────═════════════════──────══──
+                   ███████████████████████████████████
+                  ═════════════╗░░░░░░░░░╔═════════════
+                   ░░░░░░░░░░░░╚═════════╝░░░░░░░░░░░░
+                   █████████████░░░░░░░░░█████████████
+                   ╦╦╦     ╦╦╦ ╚█████████╝ ╦╦╦     ╦╦╦
+                   │█│▒▒▒▒▒│█│▒▒▒▒░░╬░░▒▒▒▒│█│▒▒▒▒▒│█│
+                  ═│█│═════│█│══▒░┌ ^ ┐░▒══│█│═════│█│═
+                   │█│░░░░░│█│▒░┌┘     └┐░▒│█│░░░░░│█│
+                   │█│░░░░░│█│░┌┘       └┐░│█│░░░░░│█│
+                   │█│░░┌─░│█│░┘         └░│█│░─┐░░│█│
+                   │█│░┌┘  │█│░│         │░│█│  └┐░│█│
+                   │█│░│   │█│░│         │░│█│   │░│█│
+                   ╩╩╩░│   ╩╩╩░│         │░╩╩╩   │░╩╩╩
+                  ████░│  ████░│         │░████  │░████
+                  ████░│  ████░│         │░████  │░████ presented by
+     __  __  ___  _   _ _   _ _|   ___________________________________
+    |  \/  |/ _ \| \ | | | | | |  / /__  ____/__  __ \_  ___/__  ____/
+    | |\/| | | | |  \| | | | | | / /__  __/  __  /_/ /____ \__  __/
+    | |  | | |_| | |\  | |_| | |/ / _  /___  _  _, _/____/ /_  /___
+    |_|  |_|\___/|_| \_|\___/ ___/  /_____/  /_/ |_| /____/ /_____/ a Reasoned Art project
+
+*/
+
+contract ArchOfPeace is MonuverseEpisode, ERC721Psi, MonuverseEntropy, ArchOfPeaceWhitelist {
     using FPEMap for uint256;
     using Strings for uint256;
 
@@ -39,38 +67,34 @@ contract ArchOfLight is ERC721Psi, MonuverseEntropy, MonuverseWhitelist {
         _archBaseURI = archBaseURI_;
     }
 
-    /// @dev quantity greater than 0 is already required by ERC721Psi
     function mint(
         uint256 quantity,
+        uint256 quantityLimit,
         string calldata group,
         bytes32[] calldata proof
     )
-        external
+        public
         payable
-        onlyWhitelisted(group, quantity, proof)
-        onlyDuringMintingChapters // onlyChaptersWithMintingAllocation
+        onlyWhitelisted(group, quantityLimit, proof)
+        // onlyAllowedQuantity(balance, quantity, quantityLimit)
+        onlyDuringMintingChapters
         onlyChapterMintingGroups(group)
+        // onlyChapterAvailableAllocation(quantity, _minted)
         onlyChapterMatchingPrices(group, quantity, msg.value)
-        // canShiftChapter(new unit256[](_minted))
-        returns (uint256)
     {
-        uint256 allocation = _availableAllocation(_minted);
-        if (quantity > allocation) {
-            quantity = allocation;
-        }
-
-        quantity -= balanceOf(_msgSender());
-
         _safeMint(_msgSender(), quantity);
-        _tryQuitMintingChapter();
 
-        // story._postMintingActions()
-
-        return quantity;
+        if (_availableChapterAllocation(_minted) == 0) {
+            _emitMonumentalEvent(ChapterAllocationMinted.selector);
+        }
     }
 
+    // function mint(uint256 quantity) external payable {
+    //     mint(quantity, "brave", new bytes32[](0x00));
+    // }
+
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
-        require(ERC721Psi._exists(tokenId), "ArchOfLight: non existent token");
+        require(ERC721Psi._exists(tokenId), "ArchOfPeace: non existent token");
 
         uint256 seed = MonuverseEntropy.seed();
 
@@ -85,8 +109,16 @@ contract ArchOfLight is ERC721Psi, MonuverseEntropy, MonuverseWhitelist {
                 );
     }
 
-    function reveal() public onlyDuringRevealingChapters {
-        require(MonuverseEntropy.seed() == 0, "ArchOfLight: already revealed");
+    function reveal() external onlyDuringRevealingChapters {
+        require(MonuverseEntropy.seed() == 0, "ArchOfPeace: already revealed");
+        // previous request id has been fulfilled
+
         MonuverseEntropy._requestRandomWord();
+    }
+
+    function withdraw() external onlyOwner {
+        (bool success, ) = payable(owner()).call{value: address(this).balance}("");
+
+        require(success, "ArchOfPeace: withdrawal unsuccessful");
     }
 }

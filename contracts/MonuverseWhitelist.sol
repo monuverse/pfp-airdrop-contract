@@ -1,19 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.16;
 
+import "./MonuverseEpisode.sol";
+
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract MonuverseWhitelist is Ownable {
+contract ArchOfPeaceWhitelist is MonuverseEpisode {
     bytes32 private _whitelistRoot;
 
     modifier onlyWhitelisted(
         string calldata chapter,
-        uint256 quantity,
+        uint256 limit,
         bytes32[] calldata proof
     ) {
         require(
-            isAccountWhitelisted(_msgSender(), quantity, chapter, proof),
+            isAccountWhitelisted(_msgSender(), limit, chapter, proof),
             "MonuverseWhitelist: caller not whitelisted"
         );
         _;
