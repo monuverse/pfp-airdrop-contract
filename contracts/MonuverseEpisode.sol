@@ -10,117 +10,88 @@ import "./DFA.sol";
 contract MonuverseEpisode is IMonuverseEpisode, Ownable {
     using DFA for DFA.Dfa;
 
-    /// @notice A collection has a story made of chapters
-    DFA.Dfa private _story;
-
     /// @notice Each chapter enables the collection to perform in a desired manner
     mapping(bytes32 => Chapter) private _chapters;
+
+    /// @notice A collection has a story made of chapters
+    DFA.Dfa private _branching;
 
     /// @notice Story is running if current chapter isn't default value 0x00
     bytes32 private _current;
 
     modifier onlyDuringMintingChapters() {
-        require(_chapters[_current].minting.allocation > 0, "MCStory: minting not allowed");
+        require(_chapters[_current].minting.limit > 0, "MonuverseEpisode: minting not allowed");
         _;
     }
 
-    modifier onlyChapterMintingGroups(string calldata group) {
+    modifier onlyChapterMintGroups(string calldata group) {
         require(
             _chapters[_current].minting.rules[hash(group)].enabled,
-            "MCStory: group not enabled"
+            "MonuverseEpisode: group not enabled"
         );
         _;
     }
 
-    // BUG:
-    modifier onlyChapterMatchingPrices(
+    modifier onlyChapterMintLimit(uint256 quantity, uint256 minted) {
+        require(
+            !(_chapters[_current].minting.limit < minted + quantity),
+            "MonuverseEpisode: exceeding minting limit"
+        );
+        _;
+    }
+
+    modifier onlyChapterMintPrices(
         string calldata groupLabel,
         uint256 quantity,
         uint256 offer
     ) {
-        bytes32 group = hash(groupLabel);
         uint256 price;
-
-        _chapters[_current].minting.rules[group].fixedPrice
-            ? price = _chapters[group].minting.price
+        _chapters[_current].minting.rules[hash(groupLabel)].fixedPrice
+            ? price = _chapters[hash(groupLabel)].minting.price
             : price = _chapters[_current].minting.price;
 
-        require(quantity * price >= offer, "MCStory: offer rejected");
+        require(!(offer < quantity * price), "MonuverseEpisode: offer rejected");
         _;
-    }
-
-    modifier willTryChapterExitWhenAllocationMinted(uint256 supply, uint256 quantity) {
-        require(_chapters[_current].minting.allocation > 0, "MCStory: minting not allowed");
-
-        if (!(_chapters[_current].minting.allocation > supply + quantity)) {
-            quantity = _chapters[_current].minting.allocation - supply;
-        }
-
-        _;
-
-        // BUG
-        if (!(supply + quantity < _chapters[_current].minting.allocation)) {
-            (bytes32 prev, bytes32 current) = tryTransition(ChapterAllocationMinted.selector);
-            emit ChapterAllocationMinted(prev, current);
-        }
-    }
-
-    function _tryQuitMintingChapter(uint256 minted) internal {
-        if (_availableChapterAllocation(minted) == 0) {
-            (bytes32 prev, bytes32 current) = tryTransition(ChapterAllocationMinted.selector);
-            emit ChapterAllocationMinted(prev, current);
-        }
-    }
-
-    function _emitMonumentalEvent(bytes32 eventSelector) internal {
-        (bytes32 prev, bytes32 current) = tryTransition(eventSelector);
-
-        if (eventSelector == ChapterAllocationMinted.selector) {
-            emit ChapterAllocationMinted(prev, current);
-        } else if (eventSelector == CollectionRevealed.selector) {
-            emit CollectionRevealed(prev, current);
-        }
     }
 
     modifier onlyDuringRevealingChapters() {
-        require(_chapters[_current].revealing, "MCStory: revealing not allowed");
+        require(_chapters[_current].revealing, "MonuverseEpisode: revealing not allowed");
         _;
     }
 
     modifier couldQuitRevealingChapter() {
         _;
-
-        (bytes32 prev, bytes32 current) = tryTransition(CollectionRevealed.selector);
-        emit CollectionRevealed(prev, current);
+        _emitMonumentalEvent(EpisodeRevealed.selector);
     }
 
-    modifier onlyInitialState() {
-        require(_current == 0x00, "MCStory: story is running");
+    modifier onlyConfigurationChapter() {
+        require(_current == 0x00, "MonuverseEpisode: configuration forbidden");
         _;
     }
 
     constructor() {
-        _story.setInitial(0x00);
+        _branching.setInitial(0x00);
     }
 
     function writeChapter(
         string calldata label,
         bool whitelisting,
-        bool revealing,
         uint256 allocation,
-        uint256 price
-    ) external onlyOwner onlyInitialState {
+        uint256 price,
+        bool revealing
+    ) external onlyOwner onlyConfigurationChapter {
         bytes32 id = hash(label);
 
         _chapters[id].whitelisting = whitelisting;
         _chapters[id].revealing = revealing;
-        _chapters[id].minting.allocation = allocation;
+        _chapters[id].minting.limit = allocation;
         _chapters[id].minting.price = price;
 
-        emit ChapterWritten(label, whitelisting, revealing, allocation, price);
+        emit ChapterWritten(label, whitelisting, allocation, price, revealing);
     }
 
-    function removeChapter(string calldata label) external onlyOwner onlyInitialState {
+    /// @dev ensure that all chapter-related branching transitions have been removed before
+    function removeChapter(string calldata label) external onlyOwner onlyConfigurationChapter {
         delete _chapters[hash(label)];
         emit ChapterRemoved(label);
     }
@@ -129,8 +100,8 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable {
         string calldata label,
         string calldata groupLabel,
         MintingGroupRules calldata mintingRules
-    ) external onlyOwner onlyInitialState {
-        require(_chapters[_current].minting.allocation > 0, "MCStory: minting not set");
+    ) external onlyOwner onlyConfigurationChapter {
+        require(_chapters[_current].minting.limit > 0, "MonuverseEpisode: minting not set");
 
         _chapters[hash(label)].minting.rules[hash(groupLabel)] = mintingRules;
         emit ChapterMintingGroupWritten(label, groupLabel, mintingRules.fixedPrice);
@@ -139,14 +110,34 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable {
     function removeChapterMintingGroup(string calldata label, string calldata groupLabel)
         external
         onlyOwner
-        onlyInitialState
+        onlyConfigurationChapter
     {
         delete _chapters[hash(label)].minting.rules[hash(groupLabel)];
         emit ChapterMintingGroupRemoved(label, groupLabel);
     }
 
-    function tryTransition(bytes32 transitionEvent) private returns (bytes32, bytes32) {
-        bytes32 aux = _story.transition(_current, transitionEvent);
+    function writeBranchingTransition(
+        string calldata from,
+        string calldata to,
+        string calldata storyEvent
+    ) external onlyOwner onlyConfigurationChapter {
+        _branching.addTransition(
+            hash(from),
+            hash(to),
+            keccak256(abi.encodePacked(storyEvent, "(bytes32,bytes32)"))
+        );
+    }
+
+    function removeBranchingTransition(bytes32 from, string calldata storyEvent)
+        external
+        onlyOwner
+        onlyConfigurationChapter
+    {
+        _branching.removeTransition(from, hash(storyEvent));
+    }
+
+    function _tryTransition(bytes32 symbol) private returns (bytes32, bytes32) {
+        bytes32 aux = _branching.transition(_current, symbol);
 
         if (_current != aux) {
             (_current, aux) = (aux, _current);
@@ -155,8 +146,22 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable {
         return (aux, _current);
     }
 
-    function _availableChapterAllocation(uint256 minted) internal view returns (uint256) {
-        return _chapters[_current].minting.allocation - minted;
+    function _emitMonumentalEvent(bytes32 selector) internal {
+        (bytes32 prev, bytes32 current) = _tryTransition(selector);
+
+        if (selector == ChapterMinted.selector) {
+            emit ChapterMinted(prev, current);
+        } else if (selector == ManuallyTransitioned.selector) {
+            emit ManuallyTransitioned(prev, current);
+        } else if (selector == EpisodeMinted.selector) {
+            emit EpisodeMinted(prev, current);
+        } else if (selector == EpisodeRevealed.selector) {
+            emit EpisodeRevealed(prev, current);
+        }
+    }
+
+    function _currentMintLimit() internal view returns (uint256) {
+        return _chapters[_current].minting.limit;
     }
 
     function hash(string calldata str) internal pure returns (bytes32) {
@@ -168,4 +173,4 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable {
 // (a) if minting allowed at all (current chapter allocation > 0), and
 // (b) if current chapter allocation is full (i.e. no chapter transition occurred)
 
-// require(_chapters[_current].minting.allocation > supply, "MCStory: minting not allowed");
+// require(_chapters[_current].minting.limit > supply, "MonuverseEpisode: minting not allowed");

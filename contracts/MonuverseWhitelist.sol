@@ -16,8 +16,19 @@ contract ArchOfPeaceWhitelist is MonuverseEpisode {
     ) {
         require(
             isAccountWhitelisted(_msgSender(), limit, chapter, proof),
-            "MonuverseWhitelist: caller not whitelisted"
+            "ArchOfPeaceWhitelist: caller not whitelisted"
         );
+
+        _;
+    }
+
+    modifier onlyWhitelistedQuantity(
+        uint256 balance,
+        uint256 quantity,
+        uint256 limit
+    ) {
+        require(!(limit < balance + quantity), "ArchOfPeaceWhitelist: exceeding quantity");
+
         _;
     }
 
@@ -33,7 +44,7 @@ contract ArchOfPeaceWhitelist is MonuverseEpisode {
     ) public view returns (bool) {
         require(
             owner() == _msgSender() || account == _msgSender(),
-            "MonuverseWhitelist: not allowed to check other users"
+            "ArchOfPeaceWhitelist: account check forbidden"
         );
 
         return

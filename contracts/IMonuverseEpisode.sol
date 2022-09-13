@@ -8,7 +8,7 @@ interface IMonuverseEpisode {
     }
 
     struct Minting {
-        uint256 allocation;
+        uint256 limit;
         uint256 price;
         mapping(bytes32 => MintingGroupRules) rules;
     }
@@ -19,29 +19,33 @@ interface IMonuverseEpisode {
         bool revealing;
     }
 
-    /// @notice Story Configuration Events
+    /// @notice Episode writing events
     event ChapterWritten(
         string label,
         bool whitelisting,
-        bool revealing,
         uint256 allocation,
-        uint256 price
+        uint256 price,
+        bool revealing
     );
     event ChapterRemoved(string label);
     event ChapterMintingGroupWritten(string label, string groupLabel, bool fixedPrice);
     event ChapterMintingGroupRemoved(string label, string groupLabel);
 
-    /// @notice Story State-Transitioning Events
-    event ChapterAllocationMinted(bytes32 prev, bytes32 current);
-    event CollectionRevealed(bytes32 prev, bytes32 current);
+    /// @notice Episode chapter-transitioning events
+    event ChapterMinted(bytes32 prev, bytes32 current);
+    event EpisodeMinted(bytes32 prev, bytes32 current);
+    event EpisodeRevealed(bytes32 prev, bytes32 current);
+    event ManuallyTransitioned(bytes32 prev, bytes32 current);
 
     function writeChapter(
         string calldata label,
         bool whitelisting,
-        bool revealing,
         uint256 allocation,
-        uint256 price
+        uint256 price,
+        bool revealing
     ) external;
+
+    function removeChapter(string calldata label) external;
 
     /// @notice 0x00 is the label of the public
     function writeChapterMintingGroup(
@@ -50,7 +54,13 @@ interface IMonuverseEpisode {
         MintingGroupRules calldata mintingRules
     ) external;
 
-    function removeChapter(string calldata label) external;
-
     function removeChapterMintingGroup(string calldata label, string calldata groupLabel) external;
+
+    function writeBranchingTransition(
+        string calldata from,
+        string calldata to,
+        string calldata storyEvent
+    ) external;
+
+    function removeBranchingTransition(bytes32 from, string calldata storyEvent) external;
 }

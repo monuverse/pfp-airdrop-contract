@@ -10,7 +10,6 @@ import "fpe-map/contracts/FPEMap.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 
-
 /**
  * @title Monuverse: Arch of Peace
  * @author Maxim Gaina
@@ -69,29 +68,29 @@ contract ArchOfPeace is MonuverseEpisode, ERC721Psi, MonuverseEntropy, ArchOfPea
 
     function mint(
         uint256 quantity,
-        uint256 quantityLimit,
+        uint256 limit,
         string calldata group,
         bytes32[] calldata proof
     )
         public
         payable
-        onlyWhitelisted(group, quantityLimit, proof)
-        // onlyAllowedQuantity(balance, quantity, quantityLimit)
         onlyDuringMintingChapters
-        onlyChapterMintingGroups(group)
-        // onlyChapterAvailableAllocation(quantity, _minted)
-        onlyChapterMatchingPrices(group, quantity, msg.value)
+        onlyWhitelisted(group, limit, proof)
+        onlyWhitelistedQuantity(balanceOf(_msgSender()), quantity, limit)
+        onlyChapterMintGroups(group)
+        onlyChapterMintLimit(quantity, _minted)
+        onlyChapterMintPrices(group, quantity, msg.value)
     {
         _safeMint(_msgSender(), quantity);
 
-        if (_availableChapterAllocation(_minted) == 0) {
-            _emitMonumentalEvent(ChapterAllocationMinted.selector);
+        if (_minted == _currentMintLimit()) {
+            _maxSupply == _currentMintLimit()
+                ? _emitMonumentalEvent(EpisodeMinted.selector)
+                : _emitMonumentalEvent(ChapterMinted.selector);
         }
     }
 
-    // function mint(uint256 quantity) external payable {
-    //     mint(quantity, "brave", new bytes32[](0x00));
-    // }
+    function mint(uint256 quantity) external payable onlyDuringMintingChapters {}
 
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
         require(ERC721Psi._exists(tokenId), "ArchOfPeace: non existent token");
@@ -111,8 +110,8 @@ contract ArchOfPeace is MonuverseEpisode, ERC721Psi, MonuverseEntropy, ArchOfPea
 
     function reveal() external onlyDuringRevealingChapters {
         require(MonuverseEntropy.seed() == 0, "ArchOfPeace: already revealed");
-        // previous request id has been fulfilled
 
+        // TODO: require there is no unfulfilled request id
         MonuverseEntropy._requestRandomWord();
     }
 
