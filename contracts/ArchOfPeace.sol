@@ -75,13 +75,14 @@ contract ArchOfPeace is MonuverseEpisode, ERC721Psi, MonuverseEntropy, ArchOfPea
         public
         payable
         onlyDuringMintingChapters
-        onlyWhitelisted(group, limit, proof)
         onlyWhitelistedQuantity(balanceOf(_msgSender()), quantity, limit)
         onlyChapterMintGroups(group)
         onlyChapterMintLimit(quantity, _minted)
         onlyChapterMintPrices(group, quantity, msg.value)
     {
-        _safeMint(_msgSender(), quantity);
+        // require(isAccountWhitelisted(_msgSender(), limit, group, proof), "");
+
+        // _safeMint(_msgSender(), quantity);
 
         if (_minted == _currentMintLimit()) {
             _maxSupply == _currentMintLimit()
@@ -90,7 +91,22 @@ contract ArchOfPeace is MonuverseEpisode, ERC721Psi, MonuverseEntropy, ArchOfPea
         }
     }
 
-    function mint(uint256 quantity) external payable onlyDuringMintingChapters {}
+    // function mint(uint256 quantity) public payable
+    //     onlyDuringMintingChapters
+    //     // onlyWhenPublicEnabled
+    //     onlyWhitelistedQuantity(balanceOf(_msgSender()), quantity, 3)
+    //     onlyChapterMintLimit(quantity, _minted)
+    //     onlyChapterMintPrices("", quantity, msg.value)
+    // {
+    //     _safeMint(_msgSender(), quantity);
+
+    //     if (_minted == _currentMintLimit()) {
+    //         _maxSupply == _currentMintLimit()
+    //             ? _emitMonumentalEvent(EpisodeMinted.selector)
+    //             : _emitMonumentalEvent(ChapterMinted.selector);
+    //     }
+    // }
+
 
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
         require(ERC721Psi._exists(tokenId), "ArchOfPeace: non existent token");

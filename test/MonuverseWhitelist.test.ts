@@ -31,7 +31,7 @@ const toWhitelistLeaf = (address: string, allowance: number): Buffer => {
     );
 };
 
-describe('MonuverseWhitelist Contract', () => {
+describe('ArchOfPeaceWhitelist Contract', () => {
     // Actors
     let monuverse: SignerWithAddress;
     let chad: whitelistRecord; // chad is always whitelisted
@@ -63,7 +63,7 @@ describe('MonuverseWhitelist Contract', () => {
 
         let whitelistRoot = whitelistTree.getRoot();
 
-        const ArchOfLight = await ethers.getContractFactory('MonuverseWhitelist');
+        const ArchOfLight = await ethers.getContractFactory('ArchOfPeaceWhitelist');
         archOfLight = await ArchOfLight.deploy();
 
         await archOfLight.deployed();

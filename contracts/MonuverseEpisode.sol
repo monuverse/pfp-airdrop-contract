@@ -121,6 +121,9 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable {
         string calldata to,
         string calldata storyEvent
     ) external onlyOwner onlyConfigurationChapter {
+        // require(_chapters[from] != 0, "DFAMock: from not set");
+        // require(_chapters[to] != 0, "DFAMock: to not set");
+
         _branching.addTransition(
             hash(from),
             hash(to),

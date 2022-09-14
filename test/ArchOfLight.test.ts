@@ -4,7 +4,7 @@ import { ethers } from 'hardhat';
 import { Contract, BigNumber } from 'ethers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
-describe('ArchOfLight Contract', () => {
+describe('ArchOfPeace Contract', () => {
     // Actors that will interact with Smartcontracts
     let monuverse: SignerWithAddress;
     let hacker: SignerWithAddress;
@@ -40,8 +40,8 @@ describe('ArchOfLight Contract', () => {
             ethers.utils.parseEther('5')
         );
 
-        const ArchOfLight = await ethers.getContractFactory('ArchOfLight');
-        archOfLight = await ArchOfLight.deploy(
+        const ArchOfPeace = await ethers.getContractFactory('ArchOfPeace');
+        archOfLight = await ArchOfPeace.deploy(
             maxSupply,
             name,
             symbol,

@@ -1,26 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-
-/// @dev importing constructor must create and set state as initial
-
-/// @dev Each existing state is a valid state, including 0x00
-/// @dev Each added transition is a valid transition
-/// @dev DFA correctness and minimization has to be evaluated off-chain
-
-
+/// @dev Each possible state except default value (0x00) is a valid state
+/// @dev Any valid state can only be reached if there is a transition allowing so
+/// @dev DFA correctness and minimization has to be evaluated offchain
+/// @dev DFA eventual runtime info must be kept into importing contract or offchain
 library DFA {
     struct Dfa {
-        bytes32 initial;
+        bytes32 init;
         mapping(bytes32 => bool) accepting;
         mapping(bytes32 => mapping(bytes32 => bytes32)) transitions;
     }
 
     function addTransition(Dfa storage self, bytes32 from, bytes32 to, bytes32 symbol) internal {
-        require(
-            self.transitions[from][symbol] == 0x00,
-            "DFA: transition already existing"
-        );
+        require(from != 0x00, "DFA: from invalid");
+        require(to != 0x00, "DFA: to invalid");
+        require(self.transitions[from][symbol] == 0x00, "DFA: already existing");
 
         self.transitions[from][symbol] = to;
     }
@@ -30,7 +25,7 @@ library DFA {
     }
 
     function setInitial(Dfa storage self, bytes32 state) internal {
-        self.initial = state;
+        self.init = state;
     }
 
     function addAccepting(Dfa storage self, bytes32 state) internal {
@@ -41,14 +36,9 @@ library DFA {
         delete self.accepting[state];
     }
 
+    /// @dev Caller must handle non existing transition returning 0x00
     function transition(Dfa storage self, bytes32 from, bytes32 symbol) internal view returns (bytes32) {
-        bytes32 next = self.transitions[from][symbol];
-
-        if (next == 0x00) {
-            next = from;
-        }
-
-        return next;
+        return self.transitions[from][symbol];
     }
 
     function isAccepting(Dfa storage self, bytes32 state) internal view returns (bool) {
@@ -56,6 +46,6 @@ library DFA {
     }
 
     function initial(Dfa storage self) internal view returns (bytes32) {
-        return self.initial;
+        return self.init;
     }
 }
