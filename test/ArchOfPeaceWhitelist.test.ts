@@ -19,24 +19,31 @@ import { keccak256 } from 'ethers/lib/utils';
 
 export type whitelistRecord = {
     account: SignerWithAddress;
-    allowance: number;
+    limit: number;
+    chapter: string;
 };
 
-const toWhitelistLeaf = (address: string, allowance: number): Buffer => {
+const toWhitelistLeaf = (
+    address: string,
+    limit: number,
+    chapter: string
+): Buffer => {
     return Buffer.from(
         ethers.utils
-            .solidityKeccak256(['address', 'uint256'], [address, allowance])
+            .solidityKeccak256(
+                ['address', 'uint256', 'string'],
+                [address, limit, chapter]
+            )
             .slice(2),
         'hex'
     );
 };
 
-describe('ArchOfPeaceWhitelist Contract', () => {
-    // Actors
+describe('CONTRACT ArchOfPeaceWhitelist', () => {
     let monuverse: SignerWithAddress;
-    let chad: whitelistRecord; // chad is always whitelisted
-    let hacker: SignerWithAddress; // hacker is always out of the whitelist
-    let users: SignerWithAddress[]; // users can enter/exit whitelist during tests
+    let chad: whitelistRecord;          // chad, always whitelisted
+    let hacker: SignerWithAddress;      // hacker, always out of the whitelist
+    let users: SignerWithAddress[];     // users may enter/exit whitelist
 
     let whitelist: whitelistRecord[];
     let whitelistTree: MerkleTree;
@@ -44,17 +51,19 @@ describe('ArchOfPeaceWhitelist Contract', () => {
     const preRevealUri = 'preRevealURI';
     let archOfLight: Contract;
 
+    const chapter: string = 'builders';
+
     before(async () => {
         [monuverse, hacker, ...users] = await ethers.getSigners();
 
         whitelist = users
             .slice(0, 8)
-            .map((user) => ({ account: user, allowance: 2 }));
+            .map((user) => ({ account: user, chapter: chapter, limit: 2 }));
 
         chad = whitelist[0];
 
         let whitelistLeaves = whitelist.map((user) =>
-            toWhitelistLeaf(user.account.address, user.allowance)
+            toWhitelistLeaf(user.account.address, user.limit, user.chapter)
         );
 
         whitelistTree = new MerkleTree(whitelistLeaves, keccak256, {
@@ -63,7 +72,9 @@ describe('ArchOfPeaceWhitelist Contract', () => {
 
         let whitelistRoot = whitelistTree.getRoot();
 
-        const ArchOfLight = await ethers.getContractFactory('ArchOfPeaceWhitelist');
+        const ArchOfLight = await ethers.getContractFactory(
+            'ArchOfPeaceWhitelist'
+        );
         archOfLight = await ArchOfLight.deploy();
 
         await archOfLight.deployed();
@@ -93,13 +104,15 @@ describe('ArchOfPeaceWhitelist Contract', () => {
 
         const isWhitelisted = await archOfLight.isAccountWhitelisted(
             whitelist[0].account.address,
-            whitelist[0].allowance,
+            whitelist[0].limit,
+            whitelist[0].chapter,
             hexProof
         );
 
         const hackerIsWhitelisted = await archOfLight.isAccountWhitelisted(
             hacker.address,
             1,
+            chapter,
             hexProof
         );
 
@@ -119,13 +132,15 @@ describe('ArchOfPeaceWhitelist Contract', () => {
 
         let newWhitelistRecord = {
             account: newWhitelistedUser,
-            allowance: 2,
+            limit: 2,
+            chapter: chapter,
         };
         whitelist.push(newWhitelistRecord);
 
         const newLeaf = toWhitelistLeaf(
             newWhitelistRecord.account.address,
-            newWhitelistRecord.allowance
+            newWhitelistRecord.limit,
+            newWhitelistRecord.chapter
         );
 
         const oldRoot = whitelistTree.getRoot();
@@ -167,13 +182,15 @@ describe('ArchOfPeaceWhitelist Contract', () => {
 
         const isWhitelisted = await archOfLight.isAccountWhitelisted(
             whitelist[0].account.address,
-            whitelist[0].allowance,
+            whitelist[0].limit,
+            whitelist[0].chapter,
             hexProof
         );
 
         const hackerIsWhitelisted = await archOfLight.isAccountWhitelisted(
             hacker.address,
             1,
+            chapter,
             hexProof
         );
 
@@ -181,7 +198,7 @@ describe('ArchOfPeaceWhitelist Contract', () => {
         expect(hackerIsWhitelisted).to.equal(false);
     });
 
-    it('MUST allow any Non-owner to check exclusively *its own* whitelist status', async () => {
+    it('COULD NOT allow any Non-owner to check someone else\'s whitelist status', async () => {
         const victim = whitelist[0];
         const whitelistedHacker = whitelist[1];
 
@@ -194,27 +211,30 @@ describe('ArchOfPeaceWhitelist Contract', () => {
                 .connect(hacker)
                 .isAccountWhitelisted(
                     victim.account.address,
-                    victim.allowance,
+                    victim.limit,
+                    victim.chapter,
                     victimHexProof
                 )
-        ).to.be.revertedWith('Not allowed to check other users');
+        ).to.be.revertedWith('ArchOfPeaceWhitelist: account check forbidden');
 
         await expect(
             archOfLight
                 .connect(whitelistedHacker.account)
                 .isAccountWhitelisted(
                     victim.account.address,
-                    victim.allowance,
+                    victim.limit,
+                    victim.chapter,
                     victimHexProof
                 )
-        ).to.be.revertedWith('Not allowed to check other users');
+        ).to.be.revertedWith('ArchOfPeaceWhitelist: account check forbidden');
 
         expect(
             await archOfLight
                 .connect(victim.account)
                 .isAccountWhitelisted(
                     victim.account.address,
-                    victim.allowance,
+                    victim.limit,
+                    victim.chapter,
                     victimHexProof
                 )
         ).to.equal(true);
@@ -224,7 +244,8 @@ describe('ArchOfPeaceWhitelist Contract', () => {
                 .connect(hacker)
                 .isAccountWhitelisted(
                     hacker.address,
-                    victim.allowance,
+                    victim.limit,
+                    victim.chapter,
                     victimHexProof
                 )
         ).to.equal(false);

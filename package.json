@@ -1,8 +1,8 @@
 {
-    "name": "arch-of-light-contract",
+    "name": "arch-of-peace-contract",
     "version": "1.0.0",
     "main": "index.js",
-    "repository": "git@github.com:monuverse/arch-of-light-contract.git",
+    "repository": "git@github.com:monuverse/arch-of-peace-contract.git",
     "author": "Maxim Gaina <maximgaina@yandex.ru>",
     "license": "BSD 3-Clause License",
     "private": true,

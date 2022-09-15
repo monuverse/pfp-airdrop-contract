@@ -38,7 +38,7 @@ contract ArchOfPeaceWhitelist is MonuverseEpisode {
 
     function isAccountWhitelisted(
         address account,
-        uint256 quantity,
+        uint256 limit,
         string calldata chapter,
         bytes32[] calldata proof
     ) public view returns (bool) {
@@ -51,7 +51,7 @@ contract ArchOfPeaceWhitelist is MonuverseEpisode {
             MerkleProof.verify(
                 proof,
                 _whitelistRoot,
-                generateWhitelistLeaf(account, quantity, chapter)
+                generateWhitelistLeaf(account, limit, chapter)
             );
     }
 
@@ -61,9 +61,9 @@ contract ArchOfPeaceWhitelist is MonuverseEpisode {
 
     function generateWhitelistLeaf(
         address account,
-        uint256 quantity,
+        uint256 limit,
         string calldata chapter
     ) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(account, quantity, chapter));
+        return keccak256(abi.encodePacked(account, limit, chapter));
     }
 }

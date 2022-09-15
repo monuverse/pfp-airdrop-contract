@@ -4,7 +4,7 @@ import { ethers } from 'hardhat';
 import { Contract, BigNumber } from 'ethers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
-describe('ArchOfPeace Contract', () => {
+describe('CONTRACT ArchOfPeace', () => {
     // Actors that will interact with Smartcontracts
     let monuverse: SignerWithAddress;
     let hacker: SignerWithAddress;
@@ -18,13 +18,13 @@ describe('ArchOfPeace Contract', () => {
     );
     let vrfCoordinatorV2Mock: Contract;
 
-    // Arch Of Light
+    // Arch Of Peace
     const name: string = 'Monutest';
     const symbol: string = 'MNT';
     const veilURI: string = 'test:veilURI_unique';
     const baseURI: string = 'test:baseURI_';
     const maxSupply: number = 77;
-    let archOfLight: Contract;
+    let archOfPeace: Contract;
 
     before(async () => {
         [monuverse, hacker, ...users] = await ethers.getSigners();
@@ -41,7 +41,7 @@ describe('ArchOfPeace Contract', () => {
         );
 
         const ArchOfPeace = await ethers.getContractFactory('ArchOfPeace');
-        archOfLight = await ArchOfPeace.deploy(
+        archOfPeace = await ArchOfPeace.deploy(
             maxSupply,
             name,
             symbol,
@@ -51,16 +51,16 @@ describe('ArchOfPeace Contract', () => {
             vrfGaslane,
             vrfSubscriptionId
         );
-        await archOfLight.deployed();
+        await archOfPeace.deployed();
 
         vrfCoordinatorV2Mock.addConsumer(
             vrfSubscriptionId,
-            archOfLight.address
+            archOfPeace.address
         );
     });
 
     beforeEach(async () => {
-        await archOfLight.connect(monuverse);
+        await archOfPeace.connect(monuverse);
     });
 
     context('Before Reveal', () => {
@@ -69,48 +69,48 @@ describe('ArchOfPeace Contract', () => {
 
             for (let i: number = 0; i < users.length; i++) {
                 await (
-                    await archOfLight.connect(users[i]).mint(userAllocation)
+                    await archOfPeace.connect(users[i]).mint(4)
                 ).wait();
 
-                expect(await archOfLight.balanceOf(users[i].address)).to.equal(
+                expect(await archOfPeace.balanceOf(users[i].address)).to.equal(
                     userAllocation
                 );
             }
         });
 
-        it('MUST only show veiled arch', async () => {
-            const totalSupply: number = await archOfLight.totalSupply();
+        it('MUST only show unrevealed arch', async () => {
+            const totalSupply: number = await archOfPeace.totalSupply();
 
             for (let i: number = 0; i < totalSupply; i++) {
-                expect(await archOfLight.tokenURI(i)).to.equal(veilURI);
+                expect(await archOfPeace.tokenURI(i)).to.equal(veilURI);
             }
         });
 
-        it('MUST unveil successfully (i.e. receive randomness successfully)', async () => {
+        it('MUST reveal successfully (i.e. receive randomness successfully)', async () => {
             const requestId: BigNumber = BigNumber.from(1);
 
-            await expect(archOfLight.unveil())
-                .to.emit(archOfLight, 'RandomnessRequested')
+            await expect(archOfPeace.reveal())
+                .to.emit(archOfPeace, 'RandomnessRequested')
                 .withArgs(requestId)
                 .and.to.emit(vrfCoordinatorV2Mock, 'RandomWordsRequested');
 
             await expect(
                 vrfCoordinatorV2Mock.fulfillRandomWords(
                     requestId,
-                    archOfLight.address
+                    archOfPeace.address
                 )
             ).to.emit(vrfCoordinatorV2Mock, 'RandomWordsFulfilled');
         });
     });
 
     context('After Reveal', () => {
-        it('MUST show each token as unveiled Arch of Light', async () => {
-            const totalSupply: number = await archOfLight.totalSupply();
+        it('MUST show each token as revealed Arch of Peace', async () => {
+            const totalSupply: number = await archOfPeace.totalSupply();
 
             let mappedMetadataIds: Set<number> = new Set<number>();
 
             for (let i: number = 0; i < totalSupply; i++) {
-                const tokenURI: string = await archOfLight.tokenURI(i);
+                const tokenURI: string = await archOfPeace.tokenURI(i);
                 expect(tokenURI.startsWith(baseURI)).to.be.true;
                 expect(tokenURI.length).to.be.greaterThan(baseURI.length);
 
@@ -127,7 +127,7 @@ describe('ArchOfPeace Contract', () => {
             expect(Math.max(...mappedMetadataIds)).to.equal(totalSupply - 1);
         });
 
-        it('MUST NOT allow another unveil');
+        it('MUST NOT allow another reveal');
     });
 });
 

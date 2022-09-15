@@ -61,7 +61,7 @@ contract DFAMock {
     }
 
     function destination(bytes32 from, bytes32 symbol) public view returns (bytes32) {
-        require(_dfa.transition(from, symbol) != 0x00, "DFAMock: non existent transition");
+        require(_dfa.transition(from, symbol) != 0x00, "DFAMock: transition non existent");
 
         return _dfa.transition(from, symbol);
     }

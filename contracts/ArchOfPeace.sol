@@ -4,39 +4,40 @@ pragma solidity 0.8.16;
 import "erc721psi/contracts/ERC721Psi.sol";
 import "./MonuverseEpisode.sol";
 import "./MonuverseEntropy.sol";
-import "./MonuverseWhitelist.sol";
+import "./ArchOfPeaceWhitelist.sol";
 
 import "fpe-map/contracts/FPEMap.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 
 /**
- * @title Monuverse: Arch of Peace
+ * @title Monuverse Episode 1 - Arch of Peace
  * @author Maxim Gaina
 
-                    └╬┘░.       .<░└╬┘░>.       .░└╬┘
-                  ──══──────═════════════════──────══──
-                   ███████████████████████████████████
-                  ═════════════╗░░░░░░░░░╔═════════════
-                   ░░░░░░░░░░░░╚═════════╝░░░░░░░░░░░░
-                   █████████████░░░░░░░░░█████████████
-                   ╦╦╦     ╦╦╦ ╚█████████╝ ╦╦╦     ╦╦╦
-                   │█│▒▒▒▒▒│█│▒▒▒▒░░╬░░▒▒▒▒│█│▒▒▒▒▒│█│
-                  ═│█│═════│█│══▒░┌ ^ ┐░▒══│█│═════│█│═
-                   │█│░░░░░│█│▒░┌┘     └┐░▒│█│░░░░░│█│
-                   │█│░░░░░│█│░┌┘       └┐░│█│░░░░░│█│
-                   │█│░░┌─░│█│░┘         └░│█│░─┐░░│█│
-                   │█│░┌┘  │█│░│         │░│█│  └┐░│█│
-                   │█│░│   │█│░│         │░│█│   │░│█│
-                   ╩╩╩░│   ╩╩╩░│         │░╩╩╩   │░╩╩╩
-                  ████░│  ████░│         │░████  │░████
-                  ████░│  ████░│         │░████  │░████ presented by
-     __  __  ___  _   _ _   _ _|   ___________________________________
-    |  \/  |/ _ \| \ | | | | | |  / /__  ____/__  __ \_  ___/__  ____/
-    | |\/| | | | |  \| | | | | | / /__  __/  __  /_/ /____ \__  __/
-    | |  | | |_| | |\  | |_| | |/ / _  /___  _  _, _/____/ /_  /___
-    |_|  |_|\___/|_| \_|\___/ ___/  /_____/  /_/ |_| /____/ /_____/ a Reasoned Art project
+                    ░█┘░.       .<░└╬┘░>.       .░└╬┘
+             ░    ──══──────═════════════════──────══──
+                ▒  ▒█ ████████████████████████████████
+              ▒█  ═════════════╗░░░░░░░░░╔═════════════
+            ▒   ▒ █▒▒▒▒▒▒▒▒▒▒▒▒╚═════════╝▒▒▒▒▒▒▒▒▒▒▒▒
+             ░ █▒  █ ███████████░░░░░░░░░█████████████
+                █  ░╦░     ╦╦╦ ╚█████████╝ ╦╦╦     ╦╦╦
+                   │▒│░░▒▒▒│█│░▒▒▒░ ╬ ░▒▒▒░│█│▒▒▒░░│█│
+                 ▒ │█│═════│█│══▒░┌ ^ ╗░▒══│█│═════│█│═
+                   │█│░▒▒░░│█│▒░┌┘     ╚╗░▒│█│░░▒▒░│█│
+                   │▒│▒▒░ ░│█│░┌┘       ╚╗░│█│░ ░▒▒│█│
+                     │▒░┌─░│█│░┘         ╚░│█│░=╗░▒│█│
+                   │▒│▒┌   │█│░│         ║░│█│  ╚╗▒│█│
+                 █ │█│▒│   │█│▒│         ║▒│█│   ║▒│█│
+              █ ▒  ╩╩╩▒    ╩╩╩▒│         ║▒╩╩╩   ║▒╩╩╩
+             ░  █ ▒███▒   ████▒│         ║▒████  ║▒████
+           ░  ▒█ ▒██▒█▒│  ████▒│         ║▒████__║▒████
+     __  __  ___ ▒█▒▒█▒│  ██▒░░│   ______║█████████████_______________
+    |  \/  |/ _ \█ \░▒ | |▒█ |░│  / /__  ____/__  __ \_  ___/__  ____/
+    | |\/| | | | |  \▒ | |░▒ | │ / /__  __/  __  /_/ /____ \__  __/
+    | |  | | |_| | |\  | |_░ | │/ / _  /___  _  _, _/____/ /_  /___
+    |_|  |_|\___/|_| \_|\___/ ___/  /_____/  /_/ |_| /____/ /_____/
 
+    a Reasoned Art project
 */
 
 contract ArchOfPeace is MonuverseEpisode, ERC721Psi, MonuverseEntropy, ArchOfPeaceWhitelist {
@@ -69,43 +70,26 @@ contract ArchOfPeace is MonuverseEpisode, ERC721Psi, MonuverseEntropy, ArchOfPea
     function mint(
         uint256 quantity,
         uint256 limit,
-        string calldata group,
+        bytes32 birth,
         bytes32[] calldata proof
-    )
-        public
-        payable
-        onlyDuringMintingChapters
-        onlyWhitelistedQuantity(balanceOf(_msgSender()), quantity, limit)
-        onlyChapterMintGroups(group)
-        onlyChapterMintLimit(quantity, _minted)
-        onlyChapterMintPrices(group, quantity, msg.value)
-    {
-        // require(isAccountWhitelisted(_msgSender(), limit, group, proof), "");
+    ) public payable {
+        // if (birth == 0x00) {
+        //     require(whitelistAllowsUser(), "");
+        // }
+        // require(whitelistAllowsQuantity(balanceOf(_msgSender()), quantity, limit), "");
+        require(_chapterAllowsMint(quantity, _minted), "");
+        require(_chapterAllowsMintGroup(birth), "");
+        require(_chapterMatchesOffer(quantity, msg.value, birth), "");
 
-        // _safeMint(_msgSender(), quantity);
+        _safeMint(_msgSender(), quantity);
 
-        if (_minted == _currentMintLimit()) {
-            _maxSupply == _currentMintLimit()
+        if (_minted == _chapterMintLimit()) {
+            _maxSupply == _chapterMintLimit()
                 ? _emitMonumentalEvent(EpisodeMinted.selector)
                 : _emitMonumentalEvent(ChapterMinted.selector);
         }
     }
 
-    // function mint(uint256 quantity) public payable
-    //     onlyDuringMintingChapters
-    //     // onlyWhenPublicEnabled
-    //     onlyWhitelistedQuantity(balanceOf(_msgSender()), quantity, 3)
-    //     onlyChapterMintLimit(quantity, _minted)
-    //     onlyChapterMintPrices("", quantity, msg.value)
-    // {
-    //     _safeMint(_msgSender(), quantity);
-
-    //     if (_minted == _currentMintLimit()) {
-    //         _maxSupply == _currentMintLimit()
-    //             ? _emitMonumentalEvent(EpisodeMinted.selector)
-    //             : _emitMonumentalEvent(ChapterMinted.selector);
-    //     }
-    // }
 
 
     function tokenURI(uint256 tokenId) public view override returns (string memory) {

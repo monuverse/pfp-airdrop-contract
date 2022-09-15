@@ -19,40 +19,6 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable {
     /// @notice Story is running if current chapter isn't default value 0x00
     bytes32 private _current;
 
-    modifier onlyDuringMintingChapters() {
-        require(_chapters[_current].minting.limit > 0, "MonuverseEpisode: minting not allowed");
-        _;
-    }
-
-    modifier onlyChapterMintGroups(string calldata group) {
-        require(
-            _chapters[_current].minting.rules[hash(group)].enabled,
-            "MonuverseEpisode: group not enabled"
-        );
-        _;
-    }
-
-    modifier onlyChapterMintLimit(uint256 quantity, uint256 minted) {
-        require(
-            !(_chapters[_current].minting.limit < minted + quantity),
-            "MonuverseEpisode: exceeding minting limit"
-        );
-        _;
-    }
-
-    modifier onlyChapterMintPrices(
-        string calldata groupLabel,
-        uint256 quantity,
-        uint256 offer
-    ) {
-        uint256 price;
-        _chapters[_current].minting.rules[hash(groupLabel)].fixedPrice
-            ? price = _chapters[hash(groupLabel)].minting.price
-            : price = _chapters[_current].minting.price;
-
-        require(!(offer < quantity * price), "MonuverseEpisode: offer rejected");
-        _;
-    }
 
     modifier onlyDuringRevealingChapters() {
         require(_chapters[_current].revealing, "MonuverseEpisode: revealing not allowed");
@@ -64,6 +30,7 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable {
         _emitMonumentalEvent(EpisodeRevealed.selector);
     }
 
+    // TODO: change into `onlyInitialChapter`, 0x00 won't be used
     modifier onlyConfigurationChapter() {
         require(_current == 0x00, "MonuverseEpisode: configuration forbidden");
         _;
@@ -163,17 +130,72 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable {
         }
     }
 
-    function _currentMintLimit() internal view returns (uint256) {
+    function _chapterAllowsMint(uint256 quantity, uint256 minted) internal view returns (bool) {
+        // This single require checks for two conditions at once:
+        // (a) if minting allowed at all (current chapter allocation > 0), and
+        // (b) if current available chapter allocation is not enough fo quantity
+        return minted + quantity <= _chapters[_current].minting.limit;
+    }
+
+    function _chapterAllowsMintGroup(bytes32 birth) internal view returns (bool) {
+        return _chapters[_current].minting.rules[birth].enabled;
+    }
+
+    function _chapterMatchesOffer(
+        uint256 quantity,
+        uint256 offer,
+        bytes32 birth
+    ) internal view returns (bool) {
+        uint256 price;
+        _chapters[_current].minting.rules[birth].fixedPrice
+            ? price = _chapters[birth].minting.price
+            : price = _chapters[_current].minting.price;
+
+        return quantity * price >= offer;
+    }
+
+    function _chapterMintLimit() internal view returns (uint256) {
         return _chapters[_current].minting.limit;
     }
 
-    function hash(string calldata str) internal pure returns (bytes32) {
+    function hash(string memory str) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(str));
     }
 }
 
-// This single require checks for two conditions at once:
-// (a) if minting allowed at all (current chapter allocation > 0), and
-// (b) if current chapter allocation is full (i.e. no chapter transition occurred)
+/*
+modifier onlyDuringMintingChapters() {
+    require(_chapters[_current].minting.limit > 0, "MonuverseEpisode: minting not allowed");
+    _;
+}
 
-// require(_chapters[_current].minting.limit > supply, "MonuverseEpisode: minting not allowed");
+modifier onlyChapterMintGroups(string calldata group) {
+    require(
+        _chapters[_current].minting.rules[hash(group)].enabled,
+        "MonuverseEpisode: group not enabled"
+    );
+    _;
+}
+
+modifier onlyChapterMintLimit(uint256 quantity, uint256 minted) {
+    require(
+        /!(_chapters[_current].minting.limit < minted + quantity),
+        "MonuverseEpisode: exceeding minting limit"
+    );
+    _;
+}
+
+modifier onlyChapterMintPrices(
+    string calldata groupLabel,
+    uint256 quantity,
+    uint256 offer
+) {
+    uint256 price;
+    _chapters[_current].minting.rules[hash(groupLabel)].fixedPrice
+        ? price = _chapters[hash(groupLabel)].minting.price
+        : price = _chapters[_current].minting.price;
+
+    require(!(offer < quantity * price), "MonuverseEpisode: offer rejected");
+    _;
+}
+ */
