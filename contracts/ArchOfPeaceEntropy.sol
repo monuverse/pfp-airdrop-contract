@@ -8,7 +8,7 @@ import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract MonuverseEntropy is MonuverseEpisode, VRFConsumerBaseV2 {
+contract ArchOfPeaceEntropy is MonuverseEpisode, VRFConsumerBaseV2 {
     VRFCoordinatorV2Interface private immutable _coordinator;
 
     struct VRFRequestParams {
@@ -16,7 +16,6 @@ contract MonuverseEntropy is MonuverseEpisode, VRFConsumerBaseV2 {
         uint64 subscriptionId;
         uint16 requestConfirmations;
         uint32 callbackGasLimit;
-        uint32 numWords;
     }
 
     VRFRequestParams private _vrfRequestParams;
@@ -29,9 +28,8 @@ contract MonuverseEntropy is MonuverseEpisode, VRFConsumerBaseV2 {
         bytes32 gasLane_,
         uint64 subscriptionId_
     ) VRFConsumerBaseV2(coordinator_) {
-        _seed = 0;
         _coordinator = VRFCoordinatorV2Interface(coordinator_);
-        _vrfRequestParams = VRFRequestParams(gasLane_, subscriptionId_, 5, 300000, 1);
+        _vrfRequestParams = VRFRequestParams(gasLane_, subscriptionId_, 5, 300000);
     }
 
     /// @notice Assumes the subscription is set sufficiently funded
@@ -41,7 +39,7 @@ contract MonuverseEntropy is MonuverseEpisode, VRFConsumerBaseV2 {
             _vrfRequestParams.subscriptionId,
             _vrfRequestParams.requestConfirmations,
             _vrfRequestParams.callbackGasLimit,
-            _vrfRequestParams.numWords
+            1
         );
 
         emit RandomnessRequested(requestId);
@@ -54,18 +52,8 @@ contract MonuverseEntropy is MonuverseEpisode, VRFConsumerBaseV2 {
         _seed = randomWords[0];
     }
 
-    function updateVRFParams(
-        bytes32 gasLane,
-        uint64 subscriptionId,
-        uint16 requestConfirmations,
-        uint32 callbackGasLimit,
-        uint32 numWords
-    ) public onlyOwner {
-        _vrfRequestParams.gasLane = gasLane;
-        _vrfRequestParams.subscriptionId = subscriptionId;
-        _vrfRequestParams.requestConfirmations = requestConfirmations;
-        _vrfRequestParams.callbackGasLimit = callbackGasLimit;
-        _vrfRequestParams.numWords = numWords;
+    function updateVRFParams(VRFRequestParams calldata newParams) public onlyOwner {
+        _vrfRequestParams = newParams;
     }
 
     function seed() internal view returns (uint256) {

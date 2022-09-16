@@ -20,18 +20,18 @@ import { keccak256 } from 'ethers/lib/utils';
 export type whitelistRecord = {
     account: SignerWithAddress;
     limit: number;
-    chapter: string;
+    chapter: Buffer;
 };
 
 const toWhitelistLeaf = (
     address: string,
     limit: number,
-    chapter: string
+    chapter: Buffer
 ): Buffer => {
     return Buffer.from(
         ethers.utils
             .solidityKeccak256(
-                ['address', 'uint256', 'string'],
+                ['address', 'uint256', 'bytes32'],
                 [address, limit, chapter]
             )
             .slice(2),
@@ -39,11 +39,18 @@ const toWhitelistLeaf = (
     );
 };
 
+const hashStr = (value: string) => {
+    return Buffer.from(
+        ethers.utils.solidityKeccak256(['string'], [value]).slice(2),
+        'hex'
+    );
+};
+
 describe('CONTRACT ArchOfPeaceWhitelist', () => {
     let monuverse: SignerWithAddress;
-    let chad: whitelistRecord;          // chad, always whitelisted
-    let hacker: SignerWithAddress;      // hacker, always out of the whitelist
-    let users: SignerWithAddress[];     // users may enter/exit whitelist
+    let chad: whitelistRecord; // chad, always whitelisted
+    let hacker: SignerWithAddress; // hacker, always out of the whitelist
+    let users: SignerWithAddress[]; // users may enter/exit whitelist
 
     let whitelist: whitelistRecord[];
     let whitelistTree: MerkleTree;
@@ -51,14 +58,14 @@ describe('CONTRACT ArchOfPeaceWhitelist', () => {
     const preRevealUri = 'preRevealURI';
     let archOfLight: Contract;
 
-    const chapter: string = 'builders';
+    const chapter: Buffer = hashStr('builders');
 
     before(async () => {
         [monuverse, hacker, ...users] = await ethers.getSigners();
 
         whitelist = users
             .slice(0, 8)
-            .map((user) => ({ account: user, chapter: chapter, limit: 2 }));
+            .map((user) => ({ account: user, limit: 2, chapter: chapter }));
 
         chad = whitelist[0];
 
@@ -198,7 +205,7 @@ describe('CONTRACT ArchOfPeaceWhitelist', () => {
         expect(hackerIsWhitelisted).to.equal(false);
     });
 
-    it('COULD NOT allow any Non-owner to check someone else\'s whitelist status', async () => {
+    it("COULD NOT allow any Non-owner to check someone else's whitelist status", async () => {
         const victim = whitelist[0];
         const whitelistedHacker = whitelist[1];
 

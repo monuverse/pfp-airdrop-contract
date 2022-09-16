@@ -1,36 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.16;
 
-import "./MonuverseEpisode.sol";
+// import "./MonuverseEpisode.sol";
 
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract ArchOfPeaceWhitelist is MonuverseEpisode {
+contract ArchOfPeaceWhitelist is Ownable {
     bytes32 private _whitelistRoot;
-
-    modifier onlyWhitelisted(
-        string calldata chapter,
-        uint256 limit,
-        bytes32[] calldata proof
-    ) {
-        require(
-            isAccountWhitelisted(_msgSender(), limit, chapter, proof),
-            "ArchOfPeaceWhitelist: caller not whitelisted"
-        );
-
-        _;
-    }
-
-    modifier onlyWhitelistedQuantity(
-        uint256 balance,
-        uint256 quantity,
-        uint256 limit
-    ) {
-        require(!(limit < balance + quantity), "ArchOfPeaceWhitelist: exceeding quantity");
-
-        _;
-    }
 
     function setWhitelistRoot(bytes32 newWhitelistRoot) public onlyOwner {
         _whitelistRoot = newWhitelistRoot;
@@ -39,8 +16,8 @@ contract ArchOfPeaceWhitelist is MonuverseEpisode {
     function isAccountWhitelisted(
         address account,
         uint256 limit,
-        string calldata chapter,
-        bytes32[] calldata proof
+        bytes32 birth,
+        bytes32[] memory proof
     ) public view returns (bool) {
         require(
             owner() == _msgSender() || account == _msgSender(),
@@ -51,8 +28,16 @@ contract ArchOfPeaceWhitelist is MonuverseEpisode {
             MerkleProof.verify(
                 proof,
                 _whitelistRoot,
-                generateWhitelistLeaf(account, limit, chapter)
+                generateWhitelistLeaf(account, limit, birth)
             );
+    }
+
+    function isAccountWhitelisted(
+        uint256 limit,
+        bytes32 birth,
+        bytes32[] memory proof
+    ) public view returns (bool) {
+        return isAccountWhitelisted(_msgSender(), limit, birth, proof);
     }
 
     function whitelistRoot() public view returns (bytes32) {
@@ -62,8 +47,16 @@ contract ArchOfPeaceWhitelist is MonuverseEpisode {
     function generateWhitelistLeaf(
         address account,
         uint256 limit,
-        string calldata chapter
+        bytes32 birth
     ) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(account, limit, chapter));
+        return keccak256(abi.encodePacked(account, limit, birth));
+    }
+
+    function _isQuantityWhitelisted(
+        uint256 balance,
+        uint256 quantity,
+        uint256 limit
+    ) internal pure returns (bool) {
+        return balance + quantity <= limit;
     }
 }
