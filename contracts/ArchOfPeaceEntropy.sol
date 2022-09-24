@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.16;
 
-import "./MonuverseEpisode.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-
-contract ArchOfPeaceEntropy is MonuverseEpisode, VRFConsumerBaseV2 {
+contract ArchOfPeaceEntropy is VRFConsumerBaseV2, Ownable {
     VRFCoordinatorV2Interface private immutable _coordinator;
 
     struct VRFRequestParams {
@@ -19,7 +17,10 @@ contract ArchOfPeaceEntropy is MonuverseEpisode, VRFConsumerBaseV2 {
     }
 
     VRFRequestParams private _vrfRequestParams;
-    uint256 private _seed;
+
+    bool private _fulfilling;
+
+    uint256 private _entropy;
 
     event RandomnessRequested(uint256 requestId);
 
@@ -42,21 +43,37 @@ contract ArchOfPeaceEntropy is MonuverseEpisode, VRFConsumerBaseV2 {
             1
         );
 
+        _fulfilling = true;
+
         emit RandomnessRequested(requestId);
     }
 
     function fulfillRandomWords(
         uint256, /* requestId */
         uint256[] memory randomWords
-    ) internal override couldQuitRevealingChapter {
-        _seed = randomWords[0];
+    ) internal virtual override {
+        _entropy = randomWords[0];
+
+        _fulfilling = false;
     }
 
     function updateVRFParams(VRFRequestParams calldata newParams) public onlyOwner {
         _vrfRequestParams = newParams;
     }
 
-    function seed() internal view returns (uint256) {
-        return _seed;
+    function _injectEntropy(uint256 random) internal {
+        _entropy = random;
+    }
+
+    function _setFulfilling(bool isFulfilling) internal {
+        _fulfilling = isFulfilling;
+    }
+
+    function fulfilling() public view returns (bool) {
+        return _fulfilling;
+    }
+
+    function entropy() public view returns (uint256) {
+        return _entropy;
     }
 }

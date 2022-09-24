@@ -16,20 +16,20 @@ import "@openzeppelin/contracts/utils/Strings.sol";
             ▒   ▒ █▒▒▒░░░░▒▒▒░░╚═════════╝░░▒▒▒░░░░░░▒
              ░ █▒  █ ███████████░░░▒▒▒░░░█████████████
                 █  ░╦░     ╦╦╦ ╚█████████╝ ╦╦╦     ╦╦╦
-                   │▒│░░▒▒▒│█│░▒▒▒░ ╬ ░▒▒▒░│█│▒▒▒░░│█│
-                 ▒ │█│─────│█│─═▒░.╔^╗.░▒══│█│═════│█│═
-                   │█│░▒▒░░│█│▒░ ┌┘   ╚╗ ░▒│█│░░▒▒░│█│
-                   │▒│▒▒░ ░│█│░ ┌┘ _░_/╚╗ ░│█│░ ░▒▒│█│
-                     │▒░┌─░│█│░┌┘ ┘   └┐╚╗░│█│╔^╗░▒│█│
-                   │▒│▒┌   │█│░│       └┐║░│█│╝┐╚╗▒│█│
-                 █ │█│▒│   │█│ │        │║▒│█│  ┐║▒│█│
-              █ ▒  ╩╩╩▒    ╩╩╩░│        │║▒╩╩╩  │║▒╩╩╩
-             ░  █ ▒███▒   ████▒│    ░   │║▒████ │║▒████
-           ░  ▒█ ▒██▒█▒│  ████▒│   ░░░  │║▒████ │║▒████
-     __  __  ___ ▒█▒▒█▒│  ██▒░▒│  ░░▒░░ │║█████████████_____________________
-    |  \/  |/ _ \█ \░▒ | |▒█ |\ \░░▒▒▒░░/ /__  ____/__  __ \_  ___/__  ____/
-    | |\/| | | | |  \▒ | |░▒ | \ ░▒▒▒▒▒░ /__  __/  __  /_/ /____ \__  __/
-    | |  | | |_| | |\  | |_░ |  \ ▒▒█▒▒ /__  /___  _  _, _/____/ /_  /___
+                   │▒│░░▒▒▒│█│░▒▒▒░░ ░░▒▒▒░│█│▒▒▒░░│█│
+                 ▒ │█│─────│█│─═▒░╔═╩═╗░▒══│█│═════│█│═
+                   │█│░▒▒░░│█│▒░┌┘'   '╚╗░▒│█│░░▒▒░│█│
+                   │▒│▒▒░ ░│█│░┌┘ \┌┴┐/ ╚╗░│█│░ ░▒▒│█│
+                     │▒░┌┴░│█│░│  ┘   └┐ ║░│█│╔╩╗░▒│█│
+                   │▒│▒┌┘\ │█│░│       └┐║░│█│╝/╚╗▒│█│
+                 █ │█│▒│┌┘ │█│ │        │║▒│█│ └┐║▒│█│
+              █ ▒  ╩╩╩▒││  ╩╩╩░│    ░   │║▒╩╩╩  │║▒╩╩╩
+             ░  █ ▒███▒││ ████▒│   ░░░  │║▒████ │║▒████
+           ░  ▒█ ▒██▒█▒││ ████▒│  ░░░░░ │║▒████ │║▒████
+     __  __  ___ ▒█▒▒█▒││ ██▒░▒│ ░░░▒░░░│║▒████_│║▒████_____________________
+    |  \/  |/ _ \█ \░▒ |│ ▒█ |\ \░░▒▒▒░░/ /__  ____/__  __ \_  ___/__  ____/
+    | |\/| | | | |  \▒ |│ ░▒ | \ ░▒▒▒▒▒░ /__  __/  __  /_/ /____ \__  __/
+    | |  | | |_| | |\  | \_░ |  \ ▒▒█▒▒ /__  /___  _  _, _/____/ /_  /___
     |_|  |_|\___/|_| \_|\___/    \ ███ /  /_____/  /_/ |_| /____/ /_____/
                                   \ █ /
     a Reasoned Art project         \*/
@@ -81,24 +81,23 @@ contract ArchOfPeace is MonuverseEpisode, ERC721Psi, ArchOfPeaceEntropy, ArchOfP
     function mint(
         uint256 quantity,
         uint256 limit,
-        bytes32 birth,
+        bytes32 group,
         bytes32[] memory proof
-    ) public payable
-    {
-        if (birth != 0x00) {
+    ) public payable {
+        if (group != _PUBLIC) {
             require(
-                isAccountWhitelisted(_msgSender(), limit, birth, proof),
+                isAccountWhitelisted(_msgSender(), limit, group, proof),
                 "ArchOfPeace: sender not whitelisted"
             );
         }
-        require(seed() == 0, "ArchOfPeace: already revealed");
+        require(entropy() == 0, "ArchOfPeace: already revealed");
         require(
             _isQuantityWhitelisted(balanceOf(_msgSender()), quantity, limit),
             "ArchOfPeace: quantity not allowed"
         );
         require(_chapterAllowsMint(quantity, _minted), "ArchOfPeace: no mint chapter");
-        require(_chapterAllowsMintGroup(birth), "ArchOfPeace: group not allowed");
-        require(_chapterMatchesOffer(quantity, msg.value, birth), "ArchOfPeace: offer unmatched");
+        require(_chapterAllowsMintGroup(group), "ArchOfPeace: group not allowed");
+        require(_chapterMatchesOffer(quantity, msg.value, group), "ArchOfPeace: offer unmatched");
 
         _safeMint(_msgSender(), quantity);
 
@@ -110,7 +109,7 @@ contract ArchOfPeace is MonuverseEpisode, ERC721Psi, ArchOfPeaceEntropy, ArchOfP
     }
 
     function mint(uint256 quantity) public payable {
-        mint(quantity, 5, 0x00, new bytes32[](0x00));
+        mint(quantity, 5, _PUBLIC, new bytes32[](0x00));
     }
 
     /**
@@ -122,11 +121,19 @@ contract ArchOfPeace is MonuverseEpisode, ERC721Psi, ArchOfPeaceEntropy, ArchOfP
      * @dev that is, if seed is still default value and not waiting for any request;
      * @dev callable by anyone at any moment only during Reveal Chapter.
      */
-    function reveal() external onlyRevealChapters {
-        require(seed() == 0, "ArchOfPeace: already revealed");
+    function reveal() external onlyRevealChapter {
+        require(entropy() == 0, "ArchOfPeace: already revealed");
+        require(!fulfilling(), "ArchOfPeace: currently fulfilling");
 
-        // TODO: require there is no unfulfilled request id
         _requestRandomWord();
+    }
+
+    function fulfillRandomWords(
+        uint256,
+        uint256[] memory randomWords
+    ) internal override emitsRevealMonumentalEvent {
+        _injectEntropy(randomWords[0]);
+        _setFulfilling(false);
     }
 
     /**
@@ -144,12 +151,12 @@ contract ArchOfPeace is MonuverseEpisode, ERC721Psi, ArchOfPeaceEntropy, ArchOfP
         require(ERC721Psi._exists(tokenId), "ArchOfPeace: non existent token");
 
         return
-            seed() == 0
+            entropy() == 0
                 ? _archVeilURI
                 : string(
                     abi.encodePacked(
                         _archBaseURI,
-                        tokenId.fpeMappingFeistelAuto(seed(), _maxSupply).toString()
+                        tokenId.fpeMappingFeistelAuto(entropy(), _maxSupply).toString()
                     )
                 );
     }

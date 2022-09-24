@@ -9,6 +9,8 @@ import "./DFA.sol";
 contract MonuverseEpisode is IMonuverseEpisode, Ownable {
     using DFA for DFA.Dfa;
 
+    bytes32 constant internal _PUBLIC = 0x00;
+
     /// @dev Episode Chapters
     mapping(bytes32 => Chapter) private _chapters;
 
