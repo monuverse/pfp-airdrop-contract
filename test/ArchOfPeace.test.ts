@@ -26,6 +26,16 @@ describe('CONTRACT ArchOfPeace', () => {
     const maxSupply: number = 77;
     let archOfPeace: Contract;
 
+    /**
+     *  before start
+     *      ...DFA config
+     *  after start
+     *      before reveal
+     *          ...minting
+     *      after reveal
+     *          !...minting
+     */
+
     before(async () => {
         [monuverse, hacker, ...users] = await ethers.getSigners();
 

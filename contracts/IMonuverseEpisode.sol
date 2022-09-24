@@ -2,7 +2,7 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 interface IMonuverseEpisode {
-    struct MintingGroupRules {
+    struct MintGroupRules {
         bool enabled;
         bool fixedPrice;
     }
@@ -10,13 +10,14 @@ interface IMonuverseEpisode {
     struct Minting {
         uint256 limit;
         uint256 price;
-        mapping(bytes32 => MintingGroupRules) rules;
+        mapping(bytes32 => MintGroupRules) rules;
     }
 
     struct Chapter {
         Minting minting;
         bool whitelisting;
         bool revealing;
+        bool exists;
     }
 
     /// @notice Episode writing events
@@ -28,10 +29,10 @@ interface IMonuverseEpisode {
         bool revealing
     );
     event ChapterRemoved(string label);
-    event ChapterMintingGroupWritten(string label, string groupLabel, bool fixedPrice);
-    event ChapterMintingGroupRemoved(string label, string groupLabel);
+    event ChapterMintGroupWritten(string label, string groupLabel, bool fixedPrice);
+    event ChapterMintGroupRemoved(string label, string groupLabel);
 
-    /// @notice Episode chapter-transitioning events
+    /// @notice Special Monumental Events
     event ChapterMinted(bytes32 prev, bytes32 current);
     event EpisodeMinted(bytes32 prev, bytes32 current);
     event EpisodeRevealed(bytes32 prev, bytes32 current);
@@ -43,23 +44,23 @@ interface IMonuverseEpisode {
         uint256 allocation,
         uint256 price,
         bool revealing
-    ) external;
+    ) external returns (bytes32);
 
     function removeChapter(string calldata label) external;
 
-    function writeChapterMintingGroup(
+    function writeChapterMintGroup(
         string calldata label,
         string calldata groupLabel,
-        MintingGroupRules calldata mintingRules
+        MintGroupRules calldata mintingRules
     ) external;
 
-    function removeChapterMintingGroup(string calldata label, string calldata groupLabel) external;
+    function removeChapterMintGroup(string calldata label, string calldata groupLabel) external;
 
-    function writeBranchingTransition(
+    function writeTransition(
         string calldata from,
         string calldata to,
         string calldata storyEvent
     ) external;
 
-    function removeBranchingTransition(bytes32 from, string calldata storyEvent) external;
+    function removeTransition(bytes32 from, string calldata storyEvent) external;
 }

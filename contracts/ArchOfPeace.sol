@@ -9,7 +9,6 @@ import "./ArchOfPeaceWhitelist.sol";
 import "fpe-map/contracts/FPEMap.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
-
                                 /*░└╬┘░*\
              ░      ░█░┘────════════╩════════────└╩┘──
                 ▒  ▒█ ████████████████████████████████
@@ -18,16 +17,16 @@ import "@openzeppelin/contracts/utils/Strings.sol";
              ░ █▒  █ ███████████░░░▒▒▒░░░█████████████
                 █  ░╦░     ╦╦╦ ╚█████████╝ ╦╦╦     ╦╦╦
                    │▒│░░▒▒▒│█│░▒▒▒░ ╬ ░▒▒▒░│█│▒▒▒░░│█│
-                 ▒ │█│─────│█│─═▒░┌ ^ ╗░▒══│█│═════│█│═
-                   │█│░▒▒░░│█│▒░┌┘     ╚╗░▒│█│░░▒▒░│█│
-                   │▒│▒▒░ ░│█│░┌┘       ╚╗░│█│░ ░▒▒│█│
-                     │▒░┌─░│█│░┘         ╚░│█│░=╗░▒│█│
-                   │▒│▒┌   │█│░│         ║░│█│  ╚╗▒│█│
-                 █ │█│▒│   │█│▒│         ║▒│█│   ║▒│█│
-              █ ▒  ╩╩╩▒    ╩╩╩▒          ║▒╩╩╩   ║▒╩╩╩
-             ░  █ ▒███▒   ████▒│    ░    ║▒████  ║▒████
-           ░  ▒█ ▒██▒█▒│  ████▒│   ░░░   ║▒████__║▒████
-     __  __  ___ ▒█▒▒█▒│  ██▒░▒│  ░░▒░░  ║█████████████_____________________
+                 ▒ │█│─────│█│─═▒░.╔^╗.░▒══│█│═════│█│═
+                   │█│░▒▒░░│█│▒░ ┌┘   ╚╗ ░▒│█│░░▒▒░│█│
+                   │▒│▒▒░ ░│█│░ ┌┘ _░_/╚╗ ░│█│░ ░▒▒│█│
+                     │▒░┌─░│█│░┌┘ ┘   └┐╚╗░│█│╔^╗░▒│█│
+                   │▒│▒┌   │█│░│       └┐║░│█│╝┐╚╗▒│█│
+                 █ │█│▒│   │█│ │        │║▒│█│  ┐║▒│█│
+              █ ▒  ╩╩╩▒    ╩╩╩░│        │║▒╩╩╩  │║▒╩╩╩
+             ░  █ ▒███▒   ████▒│    ░   │║▒████ │║▒████
+           ░  ▒█ ▒██▒█▒│  ████▒│   ░░░  │║▒████ │║▒████
+     __  __  ___ ▒█▒▒█▒│  ██▒░▒│  ░░▒░░ │║█████████████_____________________
     |  \/  |/ _ \█ \░▒ | |▒█ |\ \░░▒▒▒░░/ /__  ____/__  __ \_  ___/__  ____/
     | |\/| | | | |  \▒ | |░▒ | \ ░▒▒▒▒▒░ /__  __/  __  /_/ /____ \__  __/
     | |  | | |_| | |\  | |_░ |  \ ▒▒█▒▒ /__  /___  _  _, _/____/ /_  /___
@@ -65,11 +64,13 @@ contract ArchOfPeace is MonuverseEpisode, ERC721Psi, ArchOfPeaceEntropy, ArchOfP
         string memory symbol_,
         string memory archVeilURI_,
         string memory archBaseURI_,
+        string memory initialChapter_,
         address vrfCoordinator_,
         bytes32 vrfGasLane_,
         uint64 vrfSubscriptionId_
     )
         ERC721Psi(name_, symbol_)
+        MonuverseEpisode(initialChapter_)
         ArchOfPeaceEntropy(vrfCoordinator_, vrfGasLane_, vrfSubscriptionId_)
     {
         _maxSupply = maxSupply_;
@@ -82,19 +83,21 @@ contract ArchOfPeace is MonuverseEpisode, ERC721Psi, ArchOfPeaceEntropy, ArchOfP
         uint256 limit,
         bytes32 birth,
         bytes32[] memory proof
-    ) public payable {
+    ) public payable
+    {
         if (birth != 0x00) {
             require(
                 isAccountWhitelisted(_msgSender(), limit, birth, proof),
                 "ArchOfPeace: sender not whitelisted"
             );
         }
+        require(seed() == 0, "ArchOfPeace: already revealed");
         require(
             _isQuantityWhitelisted(balanceOf(_msgSender()), quantity, limit),
             "ArchOfPeace: quantity not allowed"
         );
         require(_chapterAllowsMint(quantity, _minted), "ArchOfPeace: no mint chapter");
-        require(_chapterAllowsMintGroup(birth), "ArchOfPeace: sender group not allowed");
+        require(_chapterAllowsMintGroup(birth), "ArchOfPeace: group not allowed");
         require(_chapterMatchesOffer(quantity, msg.value, birth), "ArchOfPeace: offer unmatched");
 
         _safeMint(_msgSender(), quantity);
@@ -119,7 +122,7 @@ contract ArchOfPeace is MonuverseEpisode, ERC721Psi, ArchOfPeaceEntropy, ArchOfP
      * @dev that is, if seed is still default value and not waiting for any request;
      * @dev callable by anyone at any moment only during Reveal Chapter.
      */
-    function reveal() external onlyDuringRevealingChapters {
+    function reveal() external onlyRevealChapters {
         require(seed() == 0, "ArchOfPeace: already revealed");
 
         // TODO: require there is no unfulfilled request id

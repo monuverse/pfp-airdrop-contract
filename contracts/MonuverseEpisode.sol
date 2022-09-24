@@ -2,7 +2,6 @@
 pragma solidity 0.8.16;
 
 import "./IMonuverseEpisode.sol";
-
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./DFA.sol";
@@ -10,106 +9,134 @@ import "./DFA.sol";
 contract MonuverseEpisode is IMonuverseEpisode, Ownable {
     using DFA for DFA.Dfa;
 
-    /// @notice Each chapter enables the collection to perform in a desired manner
+    /// @dev Episode Chapters
     mapping(bytes32 => Chapter) private _chapters;
 
-    /// @notice A collection has a story made of chapters
+    /// @dev Episode story Branching
     DFA.Dfa private _branching;
 
-    /// @notice Story is running if current chapter isn't default value 0x00
+    /// @dev Current Chapter
     bytes32 private _current;
 
-
-    modifier onlyDuringRevealingChapters() {
-        require(_chapters[_current].revealing, "MonuverseEpisode: revealing not allowed");
+    modifier onlyInitialChapter() {
+        require(_current == _branching.initial(), "MonuverseEpisode: updates forbidden");
         _;
     }
 
-    modifier couldQuitRevealingChapter() {
+    modifier onlyRevealChapter() {
+        require(_chapters[_current].revealing, "MonuverseEpisode: reveal not allowed");
+        _;
+    }
+
+    modifier emitsRevealMonumentalEvent() {
         _;
         _emitMonumentalEvent(EpisodeRevealed.selector);
     }
 
-    // TODO: change into `onlyInitialChapter`, 0x00 won't be used
-    modifier onlyConfigurationChapter() {
-        require(_current == 0x00, "MonuverseEpisode: configuration forbidden");
-        _;
-    }
-
-    constructor() {
-        _branching.setInitial(0x00);
+    constructor(string memory initial_) {
+        _current = writeChapter(initial_, false, 0, 0, false);
+        _branching.setInitial(_current);
     }
 
     function writeChapter(
-        string calldata label,
+        string memory label,
         bool whitelisting,
         uint256 allocation,
         uint256 price,
         bool revealing
-    ) external onlyOwner onlyConfigurationChapter {
-        bytes32 id = hash(label);
+    ) public onlyOwner onlyInitialChapter returns (bytes32) {
+        require(!(revealing && allocation > 0), "MonuverseEpisode: reveal with mint forbidden");
+        // Still possible to insert mint chapter after reveal chapter since DFAs don't
+        // have state order guarantees, make mint function check for occured reveal
 
-        _chapters[id].whitelisting = whitelisting;
-        _chapters[id].revealing = revealing;
-        _chapters[id].minting.limit = allocation;
-        _chapters[id].minting.price = price;
+        if (whitelisting) {
+            _chapters[hash(label)].whitelisting = whitelisting;
+        }
+
+        if (allocation > 0) {
+            _chapters[hash(label)].minting.limit = allocation;
+
+            if (price > 0) {
+                _chapters[hash(label)].minting.price = price;
+            }
+        } else if (revealing) {
+            _chapters[hash(label)].revealing = revealing;
+        }
+
+        _chapters[hash(label)].exists = true;
 
         emit ChapterWritten(label, whitelisting, allocation, price, revealing);
+
+        return hash(label);
     }
 
-    /// @dev ensure that all chapter-related branching transitions have been removed before
-    function removeChapter(string calldata label) external onlyOwner onlyConfigurationChapter {
+    /// @dev Chapter-related transitions should be separately removed before.
+    /// @dev MintGroupRules should be removed separately before.
+    function removeChapter(string calldata label) external onlyOwner onlyInitialChapter {
         delete _chapters[hash(label)];
+
         emit ChapterRemoved(label);
     }
 
-    function writeChapterMintingGroup(
+    function writeChapterMintGroup(
         string calldata label,
-        string calldata groupLabel,
-        MintingGroupRules calldata mintingRules
-    ) external onlyOwner onlyConfigurationChapter {
-        require(_chapters[_current].minting.limit > 0, "MonuverseEpisode: minting not set");
+        string calldata group,
+        MintGroupRules calldata mintRules
+    ) external onlyOwner onlyInitialChapter {
+        require(
+            _chapters[hash(group)].exists,
+            "MonuverseEpisode: group non existent"
+        );
+        require(
+            _chapters[hash(label)].minting.limit > 0,
+            "MonuverseEpisode: chapter mint disabled"
+        );
 
-        _chapters[hash(label)].minting.rules[hash(groupLabel)] = mintingRules;
-        emit ChapterMintingGroupWritten(label, groupLabel, mintingRules.fixedPrice);
+        _chapters[hash(label)].minting.rules[hash(group)] = mintRules;
+
+        emit ChapterMintGroupWritten(label, group, mintRules.fixedPrice);
     }
 
-    function removeChapterMintingGroup(string calldata label, string calldata groupLabel)
+    function removeChapterMintGroup(string calldata label, string calldata group)
         external
         onlyOwner
-        onlyConfigurationChapter
+        onlyInitialChapter
     {
-        delete _chapters[hash(label)].minting.rules[hash(groupLabel)];
-        emit ChapterMintingGroupRemoved(label, groupLabel);
+        delete _chapters[hash(label)].minting.rules[hash(group)];
+
+        emit ChapterMintGroupRemoved(label, group);
     }
 
-    function writeBranchingTransition(
+    function writeTransition(
         string calldata from,
         string calldata to,
-        string calldata storyEvent
-    ) external onlyOwner onlyConfigurationChapter {
-        // require(_chapters[from] != 0, "DFAMock: from not set");
-        // require(_chapters[to] != 0, "DFAMock: to not set");
+        string calldata monumentalEvent
+    ) external onlyOwner onlyInitialChapter {
+        require(_chapters[hash(from)].exists, "MonuverseEpisode: from not set");
+        require(_chapters[hash(to)].exists, "MonuverseEpisode: to not set");
 
         _branching.addTransition(
             hash(from),
             hash(to),
-            keccak256(abi.encodePacked(storyEvent, "(bytes32,bytes32)"))
+            keccak256(abi.encodePacked(monumentalEvent, "(bytes32,bytes32)"))
         );
     }
 
-    function removeBranchingTransition(bytes32 from, string calldata storyEvent)
+    function removeTransition(bytes32 from, string calldata monumentalEvent)
         external
         onlyOwner
-        onlyConfigurationChapter
+        onlyInitialChapter
     {
-        _branching.removeTransition(from, hash(storyEvent));
+        _branching.removeTransition(from, hash(monumentalEvent));
     }
 
+    /// @dev `aux` equals `_current` when transition destination is same as origin,
+    /// @dev `aux` equals `_current` also when no transition has been specified,
+    /// @dev (to prevent user from seeing its tx reverted)
     function _tryTransition(bytes32 symbol) private returns (bytes32, bytes32) {
         bytes32 aux = _branching.transition(_current, symbol);
 
-        if (_current != aux) {
+        if (_current != aux && aux != 0x00) {
             (_current, aux) = (aux, _current);
         }
 
@@ -162,40 +189,3 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable {
         return keccak256(abi.encodePacked(str));
     }
 }
-
-/*
-modifier onlyDuringMintingChapters() {
-    require(_chapters[_current].minting.limit > 0, "MonuverseEpisode: minting not allowed");
-    _;
-}
-
-modifier onlyChapterMintGroups(string calldata group) {
-    require(
-        _chapters[_current].minting.rules[hash(group)].enabled,
-        "MonuverseEpisode: group not enabled"
-    );
-    _;
-}
-
-modifier onlyChapterMintLimit(uint256 quantity, uint256 minted) {
-    require(
-        /!(_chapters[_current].minting.limit < minted + quantity),
-        "MonuverseEpisode: exceeding minting limit"
-    );
-    _;
-}
-
-modifier onlyChapterMintPrices(
-    string calldata groupLabel,
-    uint256 quantity,
-    uint256 offer
-) {
-    uint256 price;
-    _chapters[_current].minting.rules[hash(groupLabel)].fixedPrice
-        ? price = _chapters[hash(groupLabel)].minting.price
-        : price = _chapters[_current].minting.price;
-
-    require(!(offer < quantity * price), "MonuverseEpisode: offer rejected");
-    _;
-}
- */

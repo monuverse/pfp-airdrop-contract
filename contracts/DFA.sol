@@ -15,7 +15,7 @@ library DFA {
     function addTransition(Dfa storage self, bytes32 from, bytes32 to, bytes32 symbol) internal {
         require(from != 0x00, "DFA: from invalid");
         require(to != 0x00, "DFA: to invalid");
-        require(self.transitions[from][symbol] == 0x00, "DFA: already existing");
+        require(self.transitions[from][symbol] == 0x00, "DFA: existent transition");
 
         self.transitions[from][symbol] = to;
     }
