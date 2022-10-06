@@ -11,6 +11,7 @@ interface IMonuverseEpisode {
         uint256 limit;
         uint256 price;
         mapping(bytes32 => MintGroupRules) rules;
+        bool isOpen;
     }
 
     struct Chapter {
@@ -24,37 +25,41 @@ interface IMonuverseEpisode {
     event ChapterWritten(
         string label,
         bool whitelisting,
-        uint256 allocation,
-        uint256 price,
+        uint256 mintAllocation,
+        uint256 mintPrice,
+        bool mintOpen,
         bool revealing
     );
     event ChapterRemoved(string label);
-    event ChapterMintGroupWritten(string label, string groupLabel, bool fixedPrice);
-    event ChapterMintGroupRemoved(string label, string groupLabel);
+    event TransitionWritten(string from, string to, string monumentalEvent);
+    event TransitionRemoved(string from, string monumentalEvent);
+    event MintGroupWritten(string chapter, string group, bool fixedPrice);
+    event MintGroupRemoved(string chapter, string group);
 
     /// @notice Special Monumental Events
     event ChapterMinted(bytes32 prev, bytes32 current);
     event EpisodeMinted(bytes32 prev, bytes32 current);
     event EpisodeRevealed(bytes32 prev, bytes32 current);
-    event ManuallyTransitioned(bytes32 prev, bytes32 current);
+    event EpisodeProgressedOnlife(bytes32 prev, bytes32 current);
 
     function writeChapter(
         string calldata label,
         bool whitelisting,
-        uint256 allocation,
-        uint256 price,
+        uint256 mintAllocation,
+        uint256 mintPrice,
+        bool mintOpen,
         bool revealing
     ) external returns (bytes32);
 
     function removeChapter(string calldata label) external;
 
-    function writeChapterMintGroup(
-        string calldata label,
-        string calldata groupLabel,
+    function writeMintGroup(
+        string calldata chapter,
+        string calldata group,
         MintGroupRules calldata mintingRules
     ) external;
 
-    function removeChapterMintGroup(string calldata label, string calldata groupLabel) external;
+    function removeMintGroup(string calldata chapter, string calldata group) external;
 
     function writeTransition(
         string calldata from,
@@ -62,5 +67,5 @@ interface IMonuverseEpisode {
         string calldata storyEvent
     ) external;
 
-    function removeTransition(bytes32 from, string calldata storyEvent) external;
+    function removeTransition(string calldata from, string calldata storyEvent) external;
 }

@@ -109,19 +109,18 @@ describe('CONTRACT ArchOfPeaceWhitelist', () => {
             whitelistTree.getLeaves()[0]
         );
 
-        const isWhitelisted = await archOfLight.isAccountWhitelisted(
+        const isWhitelisted = await archOfLight[
+            'isAccountWhitelisted(address,uint256,bytes32,bytes32[])'
+        ](
             whitelist[0].account.address,
             whitelist[0].limit,
             whitelist[0].chapter,
             hexProof
         );
 
-        const hackerIsWhitelisted = await archOfLight.isAccountWhitelisted(
-            hacker.address,
-            1,
-            chapter,
-            hexProof
-        );
+        const hackerIsWhitelisted = await archOfLight[
+            'isAccountWhitelisted(address,uint256,bytes32,bytes32[])'
+        ](hacker.address, 1, chapter, hexProof);
 
         expect(isWhitelisted).to.equal(true);
         expect(hackerIsWhitelisted).to.equal(false);
@@ -187,19 +186,18 @@ describe('CONTRACT ArchOfPeaceWhitelist', () => {
             whitelistTree.getLeaves()[0]
         );
 
-        const isWhitelisted = await archOfLight.isAccountWhitelisted(
+        const isWhitelisted = await archOfLight[
+            'isAccountWhitelisted(address,uint256,bytes32,bytes32[])'
+        ](
             whitelist[0].account.address,
             whitelist[0].limit,
             whitelist[0].chapter,
             hexProof
         );
 
-        const hackerIsWhitelisted = await archOfLight.isAccountWhitelisted(
-            hacker.address,
-            1,
-            chapter,
-            hexProof
-        );
+        const hackerIsWhitelisted = await archOfLight[
+            'isAccountWhitelisted(address,uint256,bytes32,bytes32[])'
+        ](hacker.address, 1, chapter, hexProof);
 
         expect(isWhitelisted).to.equal(true);
         expect(hackerIsWhitelisted).to.equal(false);
@@ -216,7 +214,7 @@ describe('CONTRACT ArchOfPeaceWhitelist', () => {
         await expect(
             archOfLight
                 .connect(hacker)
-                .isAccountWhitelisted(
+                ['isAccountWhitelisted(address,uint256,bytes32,bytes32[])'](
                     victim.account.address,
                     victim.limit,
                     victim.chapter,
@@ -227,7 +225,7 @@ describe('CONTRACT ArchOfPeaceWhitelist', () => {
         await expect(
             archOfLight
                 .connect(whitelistedHacker.account)
-                .isAccountWhitelisted(
+                ['isAccountWhitelisted(address,uint256,bytes32,bytes32[])'](
                     victim.account.address,
                     victim.limit,
                     victim.chapter,
@@ -238,7 +236,7 @@ describe('CONTRACT ArchOfPeaceWhitelist', () => {
         expect(
             await archOfLight
                 .connect(victim.account)
-                .isAccountWhitelisted(
+                ['isAccountWhitelisted(address,uint256,bytes32,bytes32[])'](
                     victim.account.address,
                     victim.limit,
                     victim.chapter,
@@ -249,7 +247,7 @@ describe('CONTRACT ArchOfPeaceWhitelist', () => {
         expect(
             await archOfLight
                 .connect(hacker)
-                .isAccountWhitelisted(
+                ['isAccountWhitelisted(address,uint256,bytes32,bytes32[])'](
                     hacker.address,
                     victim.limit,
                     victim.chapter,

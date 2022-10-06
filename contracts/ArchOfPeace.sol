@@ -3,6 +3,7 @@ pragma solidity 0.8.16;
 
 import "./MonuverseEpisode.sol";
 import "erc721psi/contracts/ERC721Psi.sol";
+import "erc721psi/contracts/extension/ERC721PsiBurnable.sol";
 import "./ArchOfPeaceEntropy.sol";
 import "./ArchOfPeaceWhitelist.sol";
 
@@ -84,17 +85,14 @@ contract ArchOfPeace is MonuverseEpisode, ERC721Psi, ArchOfPeaceEntropy, ArchOfP
         bytes32 group,
         bytes32[] memory proof
     ) public payable {
-        if (group != _PUBLIC) {
+        if (!_chapterAllowsOpenMint()) {
             require(
                 isAccountWhitelisted(_msgSender(), limit, group, proof),
                 "ArchOfPeace: sender not whitelisted"
             );
         }
         require(entropy() == 0, "ArchOfPeace: already revealed");
-        require(
-            _isQuantityWhitelisted(balanceOf(_msgSender()), quantity, limit),
-            "ArchOfPeace: quantity not allowed"
-        );
+        require(_isQuantityWhitelisted(balanceOf(_msgSender()), quantity, limit), "ArchOfPeace: quantity not allowed" );
         require(_chapterAllowsMint(quantity, _minted), "ArchOfPeace: no mint chapter");
         require(_chapterAllowsMintGroup(group), "ArchOfPeace: group not allowed");
         require(_chapterMatchesOffer(quantity, msg.value, group), "ArchOfPeace: offer unmatched");
@@ -109,7 +107,7 @@ contract ArchOfPeace is MonuverseEpisode, ERC721Psi, ArchOfPeaceEntropy, ArchOfP
     }
 
     function mint(uint256 quantity) public payable {
-        mint(quantity, 5, _PUBLIC, new bytes32[](0x00));
+        mint(quantity, 3, currentChapter(), new bytes32[](0x00));
     }
 
     /**
