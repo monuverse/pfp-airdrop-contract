@@ -13,6 +13,7 @@ contract ArchOfPeaceWhitelist is Ownable {
         _whitelistRoot = newWhitelistRoot;
     }
 
+    // TODO: FIX, require no if internal
     function isAccountWhitelisted(
         address account,
         uint256 limit,
@@ -28,7 +29,7 @@ contract ArchOfPeaceWhitelist is Ownable {
             MerkleProof.verify(
                 proof,
                 _whitelistRoot,
-                generateWhitelistLeaf(account, limit, birth)
+                _generateWhitelistLeaf(account, limit, birth)
             );
     }
 
@@ -44,7 +45,7 @@ contract ArchOfPeaceWhitelist is Ownable {
         return _whitelistRoot;
     }
 
-    function generateWhitelistLeaf(
+    function _generateWhitelistLeaf(
         address account,
         uint256 limit,
         bytes32 birth

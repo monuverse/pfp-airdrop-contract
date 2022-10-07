@@ -33,4 +33,8 @@ contract MonuverseEpisodeMock is MonuverseEpisode {
     function chapterMintLimit() internal view returns (uint256) {
         return MonuverseEpisode._chapterMintLimit();
     }
+
+    function emitOnlifeMonumentalEvent(string calldata monumentalEvent) public onlyOwner {
+        _emitMonumentalEvent(keccak256(abi.encodePacked(monumentalEvent, "(bytes32,bytes32)")));
+    }
 }

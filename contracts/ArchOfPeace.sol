@@ -131,6 +131,10 @@ contract ArchOfPeace is MonuverseEpisode, ERC721Psi, ArchOfPeaceEntropy, ArchOfP
         uint256[] memory randomWords
     ) internal override emitsRevealMonumentalEvent {
         _injectEntropy(randomWords[0]);
+
+        // TODO eliminate setfulfilling and call overriden function
+        // super.fulfillRandomWords();
+
         _setFulfilling(false);
     }
 

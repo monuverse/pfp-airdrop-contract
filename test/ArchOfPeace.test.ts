@@ -226,25 +226,25 @@ describe('CONTRACT ArchOfPeace', async () => {
         }
     });
 
-    context('Episode Environments', async () => {
-        for (let i: number = 0; i < episode.length; i++) {
-            context(`Chapter "${episode[i].label}"`, async () => {
-                episode[i].whitelisting
-                    ? it('MUST allow whitelisting', async () => {})
-                    : it('MUST NOT allow whitelisting');
+    // context('Episode Environments', async () => {
+    //     for (let i: number = 0; i < episode.length; i++) {
+    //         context(`Chapter "${episode[i].label}"`, async () => {
+    //             episode[i].whitelisting
+    //                 ? it('MUST allow whitelisting', async () => {})
+    //                 : it('MUST NOT allow whitelisting');
 
-                episode[i].minting.limit > 0
-                    ? it('Must allow minting')
-                    : it('MUST NOT allow minting');
+    //             episode[i].minting.limit > 0
+    //                 ? it('Must allow minting')
+    //                 : it('MUST NOT allow minting');
 
-                episode[i].revealing
-                    ? it('MUST allow revealing', async () => {
-                          // expect minting to be disabled
-                      })
-                    : it('MUST NOT allow revealing');
-            });
-        }
-    });
+    //             episode[i].revealing
+    //                 ? it('MUST allow revealing', async () => {
+    //                       // expect minting to be disabled
+    //                   })
+    //                 : it('MUST NOT allow revealing');
+    //         });
+    //     }
+    // });
     // context('Episode Transitions');
 
     context('Before Reveal', () => {

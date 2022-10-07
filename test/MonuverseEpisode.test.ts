@@ -80,7 +80,7 @@ const episode: Array<Chapter> = [
         revealing: false,
     },
     {
-        label: 'A Monumental Arch Reveal',
+        label: 'Monumental Reveal',
         whitelisting: false,
         minting: { limit: 0, price: 0, rules: [], isOpen: false },
         revealing: false,
@@ -95,13 +95,18 @@ const episode: Array<Chapter> = [
 
 const branching: Array<Transition> = [
     {
-        from: 'The Big Monubang',
+        from: 'The Big Bang',
         event: 'EpisodeProgressedOnlife',
         to: 'The Builders',
     },
     {
         from: 'The Builders',
         event: 'EpisodeProgressedOnlife',
+        to: 'The Builders',
+    },
+    {
+        from: 'The Builders',
+        event: 'ChapterMinted',
         to: 'The Chosen Ones',
     },
     {
@@ -117,17 +122,22 @@ const branching: Array<Transition> = [
     {
         from: 'The Brave',
         event: 'EpisodeProgressedOnlife',
-        to: 'A Monumental Arch Reveal',
+        to: 'Monumental Reveal',
     },
     {
         from: 'The Brave',
         event: 'EpisodeMinted',
-        to: 'A Monumental Arch Reveal',
+        to: 'Monumental Reveal',
     },
     {
-        from: 'A Monumental Arch Reveal',
+        from: 'Monumental Reveal',
         event: 'EpisodeRevealed',
         to: 'To The Monuverse',
+    },
+    {
+        from: 'To The Monuverse',
+        event: 'EpisodeProgressedOnlife',
+        to: 'The Builders',
     },
 ];
 
@@ -165,8 +175,62 @@ describe('CONTRACT MonuverseEpisode', async () => {
         await monuverseEpisode.connect(owner);
     });
 
-    context('During Episode Configuration (Initial Chapter)', () => {
-        it('MUST allow sound Chapter writing', async () => {
+    context('During Episode Configuration (in Initial Chapter)', () => {
+        after(
+            'Closes Episode Configuration (transitions from Initial Chapter)',
+            async () => {
+                const initial = await monuverseEpisode.initialChapter();
+                let current = await monuverseEpisode.currentChapter();
+
+                if (initial == current) {
+                    await expect(
+                        monuverseEpisode['emitOnlifeMonumentalEvent()']()
+                    )
+                        .to.emit(monuverseEpisode, 'EpisodeProgressedOnlife')
+                        .withArgs(
+                            hashStr(episode[0].label),
+                            hashStr(episode[1].label)
+                        );
+                }
+
+                current = await monuverseEpisode.currentChapter();
+
+                expect(initial).to.not.equal(current);
+                expect(current).to.equal(hashStr(episode[1].label));
+            }
+        );
+
+        it('MUST allow Chapter writing', async () => {
+            for (let i: number = 0; i < episode.length; i++) {
+                await expect(
+                    monuverseEpisode.writeChapter(
+                        episode[i].label,
+                        episode[i].whitelisting,
+                        episode[i].minting.limit,
+                        ethers.utils.parseUnits(
+                            episode[i].minting.price.toString(),
+                            'ether'
+                        ),
+                        episode[i].minting.isOpen,
+                        episode[i].revealing
+                    )
+                )
+                    .to.emit(monuverseEpisode, 'ChapterWritten')
+                    .withArgs(
+                        episode[i].label,
+                        episode[i].whitelisting,
+                        episode[i].minting.limit,
+                        ethers.utils.parseUnits(
+                            episode[i].minting.price.toString(),
+                            'ether'
+                        ),
+                        episode[i].minting.isOpen,
+                        episode[i].revealing
+                    );
+            }
+        });
+
+        it('MUST allow Chapter rewriting', async () => {
             for (let i: number = 0; i < episode.length; i++) {
                 await expect(
                     monuverseEpisode.writeChapter(
@@ -261,6 +325,31 @@ describe('CONTRACT MonuverseEpisode', async () => {
             }
         });
 
+        it('MUST allow Mint Group rewriting', async () => {
+            for (let e: number = 0; e < episode.length; e++) {
+                const rules: Array<MintGroupRules> = episode[e].minting.rules;
+
+                for (let r: number = 0; r < rules.length; r++) {
+                    await expect(
+                        monuverseEpisode.writeMintGroup(
+                            episode[e].label,
+                            rules[r].label,
+                            {
+                                enabled: rules[r].enabled,
+                                fixedPrice: rules[r].fixedPrice,
+                            }
+                        )
+                    )
+                        .to.emit(monuverseEpisode, 'MintGroupWritten')
+                        .withArgs(
+                            episode[e].label,
+                            rules[r].label,
+                            rules[r].fixedPrice
+                        );
+                }
+            }
+        });
+
         it('MUST allow Mint Group writing only to Owner', async () => {
             for (let e: number = 0; e < episode.length; e++) {
                 const rules: Array<MintGroupRules> = episode[e].minting.rules;
@@ -321,10 +410,10 @@ describe('CONTRACT MonuverseEpisode', async () => {
                 }
             }
 
-            expect(disabledMintingExists).to.equal(true);
+            expect(disabledMintingExists).to.be.true;
         });
 
-        it('MUST allow Story Branching Writing (i.e. Chapter transitions)', async () => {
+        it('MUST allow Story Branching writing (i.e. Chapter transitions)', async () => {
             for (let i: number = 0; i < branching.length; i++) {
                 await expect(
                     monuverseEpisode.writeTransition(
@@ -339,6 +428,18 @@ describe('CONTRACT MonuverseEpisode', async () => {
                         branching[i].to,
                         branching[i].event
                     );
+            }
+        });
+
+        it('MUST NOT allow Story Branching rewriting (non-determinism introduction risk)', async () => {
+            for (let i: number = 0; i < branching.length; i++) {
+                await expect(
+                    monuverseEpisode.writeTransition(
+                        branching[i].from,
+                        branching[i].to,
+                        branching[i].event
+                    )
+                ).to.be.revertedWith('DFA: existent transition');
             }
         });
 
@@ -376,91 +477,91 @@ describe('CONTRACT MonuverseEpisode', async () => {
             }
         });
 
-        it('MUST NOT allow Story Branching Removal to non-Owner', async () => {
-            for (let i: number = 0; i < branching.length; i++) {
-                await expect(
-                    monuverseEpisode
-                        .connect(hacker)
-                        .removeTransition(branching[i].from, branching[i].to)
-                ).to.be.revertedWith(senderNotOwnerError);
-            }
-        });
+        // it('MUST NOT allow Story Branching Removal to non-Owner', async () => {
+        //     for (let i: number = 0; i < branching.length; i++) {
+        //         await expect(
+        //             monuverseEpisode
+        //                 .connect(hacker)
+        //                 .removeTransition(branching[i].from, branching[i].to)
+        //         ).to.be.revertedWith(senderNotOwnerError);
+        //     }
+        // });
 
-        it('MUST allow Story Branching Removal', async () => {
-            for (let i: number = 0; i < branching.length; i++) {
-                await expect(
-                    monuverseEpisode.removeTransition(
-                        branching[i].from,
-                        branching[i].event
-                    )
-                )
-                    .to.emit(monuverseEpisode, 'TransitionRemoved')
-                    .withArgs(branching[i].from, branching[i].event);
-            }
-        });
+        // it('MUST allow Story Branching Removal', async () => {
+        //     for (let i: number = 0; i < branching.length; i++) {
+        //         await expect(
+        //             monuverseEpisode.removeTransition(
+        //                 branching[i].from,
+        //                 branching[i].event
+        //             )
+        //         )
+        //             .to.emit(monuverseEpisode, 'TransitionRemoved')
+        //             .withArgs(branching[i].from, branching[i].event);
+        //     }
+        // });
 
-        it('MUST NOT allow Mint Group Removal to non-Owners', async () => {
-            for (let e: number = 0; e < episode.length; e++) {
-                const rules: Array<MintGroupRules> = episode[e].minting.rules;
+        // it('MUST NOT allow Mint Group Removal to non-Owners', async () => {
+        //     for (let e: number = 0; e < episode.length; e++) {
+        //         const rules: Array<MintGroupRules> = episode[e].minting.rules;
 
-                for (let r: number = 0; r < rules.length; r++) {
-                    await expect(
-                        monuverseEpisode
-                            .connect(hacker)
-                            .removeMintGroup(episode[e].label, rules[r].label)
-                    ).to.be.revertedWith(senderNotOwnerError);
-                }
-            }
-        });
+        //         for (let r: number = 0; r < rules.length; r++) {
+        //             await expect(
+        //                 monuverseEpisode
+        //                     .connect(hacker)
+        //                     .removeMintGroup(episode[e].label, rules[r].label)
+        //             ).to.be.revertedWith(senderNotOwnerError);
+        //         }
+        //     }
+        // });
 
-        it('MUST allow Mint Group removal', async () => {
-            for (let e: number = 0; e < episode.length; e++) {
-                const rules: Array<MintGroupRules> = episode[e].minting.rules;
+        // it('MUST allow Mint Group removal', async () => {
+        //     for (let e: number = 0; e < episode.length; e++) {
+        //         const rules: Array<MintGroupRules> = episode[e].minting.rules;
 
-                for (let r: number = 0; r < rules.length; r++) {
-                    await expect(
-                        monuverseEpisode.removeMintGroup(
-                            episode[e].label,
-                            rules[r].label
-                        )
-                    )
-                        .to.emit(monuverseEpisode, 'MintGroupRemoved')
-                        .withArgs(episode[e].label, rules[r].label);
+        //         for (let r: number = 0; r < rules.length; r++) {
+        //             await expect(
+        //                 monuverseEpisode.removeMintGroup(
+        //                     episode[e].label,
+        //                     rules[r].label
+        //                 )
+        //             )
+        //                 .to.emit(monuverseEpisode, 'MintGroupRemoved')
+        //                 .withArgs(episode[e].label, rules[r].label);
 
-                    let removedGroup = await monuverseEpisode.mintGroup(
-                        episode[e].label,
-                        rules[r].label
-                    );
+        //             let removedGroup = await monuverseEpisode.mintGroup(
+        //                 episode[e].label,
+        //                 rules[r].label
+        //             );
 
-                    expect(removedGroup[0]).to.be.false;
-                    expect(removedGroup[1]).to.be.false;
-                }
-            }
-        });
+        //             expect(removedGroup[0]).to.be.false;
+        //             expect(removedGroup[1]).to.be.false;
+        //         }
+        //     }
+        // });
 
-        it('MUST NOT allow Chapter removal to non-Owner', async () =>
-            await expect(
-                monuverseEpisode.connect(hacker).removeChapter(episode[0].label)
-            ).to.be.revertedWith(senderNotOwnerError));
+        // it('MUST NOT allow Chapter removal to non-Owner', async () =>
+        //     await expect(
+        //         monuverseEpisode.connect(hacker).removeChapter(episode[0].label)
+        //     ).to.be.revertedWith(senderNotOwnerError));
 
-        it('MUST NOT allow initial Chapter Removal', async () => {
-            expect(
-                monuverseEpisode.removeChapter(episode[0].label)
-            ).to.be.revertedWith('MonuverseEpisode: initial non deletable');
-        });
+        // it('MUST NOT allow initial Chapter Removal', async () => {
+        //     await expect(
+        //         monuverseEpisode.removeChapter(episode[0].label)
+        //     ).to.be.revertedWith('MonuverseEpisode: initial non deletable');
+        // });
 
-        it('MUST allow Chapter removal', async () => {
-            for (let i: number = 1; i < episode.length; i++) {
-                await expect(monuverseEpisode.removeChapter(episode[i].label))
-                    .to.emit(monuverseEpisode, 'ChapterRemoved')
-                    .withArgs(episode[i].label);
-            }
-        });
+        // it('MUST allow Chapter removal', async () => {
+        //     for (let i: number = 1; i < episode.length; i++) {
+        //         await expect(monuverseEpisode.removeChapter(episode[i].label))
+        //             .to.emit(monuverseEpisode, 'ChapterRemoved')
+        //             .withArgs(episode[i].label);
+        //     }
+        // });
     });
 
     context('When Episode is Running (Post-Configuration)', () => {
         it('MUST NOT allow Episode Writing outside inital Chapter', async () => {
-            expect(
+            await expect(
                 monuverseEpisode.writeChapter(
                     episode[0].label,
                     episode[0].whitelisting,
@@ -479,7 +580,7 @@ describe('CONTRACT MonuverseEpisode', async () => {
                 if (episode[e].minting.rules.length > 0) {
                     mintingGroupExists = true;
 
-                    expect(
+                    await expect(
                         monuverseEpisode.writeMintGroup(
                             episode[e].label,
                             episode[e].minting.rules[0].label,
@@ -494,7 +595,7 @@ describe('CONTRACT MonuverseEpisode', async () => {
             }
             expect(mintingGroupExists).to.equal(true);
 
-            expect(
+            await expect(
                 monuverseEpisode.writeTransition(
                     branching[0].from,
                     branching[0].to,
@@ -502,7 +603,7 @@ describe('CONTRACT MonuverseEpisode', async () => {
                 )
             ).to.be.revertedWith(updatesForbiddenError);
 
-            expect(
+            await expect(
                 monuverseEpisode.removeTransition(
                     branching[0].from,
                     branching[0].event
@@ -513,7 +614,7 @@ describe('CONTRACT MonuverseEpisode', async () => {
                 if (episode[e].minting.rules.length > 0) {
                     mintingGroupExists = true;
 
-                    expect(
+                    await expect(
                         monuverseEpisode.removeMintGroup(
                             episode[e].label,
                             episode[e].minting.rules[0].label
@@ -522,22 +623,61 @@ describe('CONTRACT MonuverseEpisode', async () => {
                 }
             }
 
-            expect(
+            await expect(
                 monuverseEpisode.removeChapter(episode[0].label)
             ).to.be.revertedWith(updatesForbiddenError);
         });
 
-        it("SHOULD remain in current Chapter if transition doesn't exist");
+        it("MUST remain in current Chapter if transition doesn't exist", async () =>
+            await expect(
+                monuverseEpisode['emitOnlifeMonumentalEvent(string)'](
+                    'EpisodeMinted'
+                )
+            )
+                .to.emit(monuverseEpisode, 'EpisodeMinted')
+                .withArgs(
+                    '0x0000000000000000000000000000000000000000000000000000000000000000',
+                    hashStr(episode[1].label)
+                ));
 
-        it(
-            'MUST remain in current Chapter if transition destination is the same'
-        );
+        it("MUST revert if Monumental Event doesn't exist", async () =>
+            await expect(
+                monuverseEpisode['emitOnlifeMonumentalEvent(string)'](
+                    'NonExistentEvent'
+                )
+            ).to.be.revertedWith('MonuverseEpisode: event non existent'));
 
-        it('MUST transtion into correct Chapter by emitting Monumental Event');
+        it('MUST remain in current Chapter if transition destination is the same', async () =>
+            await expect(
+                monuverseEpisode['emitOnlifeMonumentalEvent(string)'](
+                    'EpisodeProgressedOnlife'
+                )
+            )
+                .to.emit(monuverseEpisode, 'EpisodeProgressedOnlife')
+                .withArgs(
+                    hashStr(episode[1].label),
+                    hashStr(episode[1].label)
+                ));
 
-        it(
-            'MUST transtion into correct Chapter by emitting Onlife Monumental Event'
-        );
+        it('MUST transtion into correct Chapter by emitting Monumental Event', async () =>
+            await expect(
+                monuverseEpisode['emitOnlifeMonumentalEvent(string)'](
+                    'ChapterMinted'
+                )
+            )
+                .to.emit(monuverseEpisode, 'ChapterMinted')
+                .withArgs(
+                    hashStr(episode[1].label),
+                    hashStr(episode[2].label)
+                ));
+
+        it('MUST transtion into correct Chapter by emitting Onlife Monumental Event', async () =>
+            await expect(monuverseEpisode['emitOnlifeMonumentalEvent()']())
+                .to.emit(monuverseEpisode, 'EpisodeProgressedOnlife')
+                .withArgs(
+                    hashStr(episode[2].label),
+                    hashStr(episode[3].label)
+                ));
 
         it('SHOULD NOT transition away from Final Chapter');
 
@@ -545,4 +685,9 @@ describe('CONTRACT MonuverseEpisode', async () => {
 
         it('MUST allow sound Onlife Events emission only to Owner');
     });
+
+    context(
+        'During Episode Configuration or after returning to Episode Configuration from another Chapter',
+        () => {}
+    );
 });

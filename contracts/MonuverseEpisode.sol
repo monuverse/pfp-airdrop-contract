@@ -53,24 +53,11 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable {
         // Still possible to insert mint chapter after reveal chapter since DFAs don't
         // have state order guarantees, make mint function check for occured reveal
 
-        if (whitelisting) {
-            _chapters[_hash(label)].whitelisting = whitelisting;
-        }
-
-        if (mintAllocation > 0) {
-            _chapters[_hash(label)].minting.limit = mintAllocation;
-
-            if (mintPrice > 0) {
-                _chapters[_hash(label)].minting.price = mintPrice;
-            }
-
-            if (mintOpen) {
-                _chapters[_hash(label)].minting.isOpen = true;
-            }
-        } else if (revealing) {
-            _chapters[_hash(label)].revealing = revealing;
-        }
-
+        _chapters[_hash(label)].whitelisting = whitelisting;
+        _chapters[_hash(label)].minting.limit = mintAllocation;
+        _chapters[_hash(label)].minting.price = mintPrice;
+        _chapters[_hash(label)].minting.isOpen = true;
+        _chapters[_hash(label)].revealing = revealing;
         _chapters[_hash(label)].exists = true;
 
         emit ChapterWritten(label, whitelisting, mintAllocation, mintPrice, mintOpen, revealing);
@@ -142,16 +129,14 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable {
     }
 
     function emitOnlifeMonumentalEvent() public onlyOwner {
-        _tryTransition(EpisodeProgressedOnlife.selector);
-    }
-
-    function emitOnlifeMonumentalEvent(string calldata monumentalEvent) public onlyOwner {
-        _tryTransition(_hash(monumentalEvent));
+        _emitMonumentalEvent(EpisodeProgressedOnlife.selector);
     }
 
     /// @dev `aux` equals `_current` when transition destination is same as origin,
     /// @dev `aux` equals `_current` also when no transition has been specified,
     /// @dev (to prevent user from seeing its tx reverted)
+    /// @return aux previous state, 0x00 if no transition exists
+    /// @return _current new current post-transition state
     function _tryTransition(bytes32 symbol) private returns (bytes32, bytes32) {
         bytes32 aux = _branching.transition(_current, symbol);
 
@@ -173,6 +158,8 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable {
             emit EpisodeMinted(prev, current);
         } else if (selector == EpisodeRevealed.selector) {
             emit EpisodeRevealed(prev, current);
+        } else {
+            revert("MonuverseEpisode: event non existent");
         }
     }
 
