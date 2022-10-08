@@ -128,7 +128,7 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable {
         emit TransitionRemoved(from, monumentalEvent);
     }
 
-    function emitOnlifeMonumentalEvent() public onlyOwner {
+    function emitOnlifeEvent() public onlyOwner {
         _emitMonumentalEvent(EpisodeProgressedOnlife.selector);
     }
 

@@ -6,8 +6,8 @@ import "../MonuverseEpisode.sol";
 contract MonuverseEpisodeMock is MonuverseEpisode {
     constructor(string memory initial_) MonuverseEpisode(initial_) {}
 
-    function emitMonumentalEvent(bytes32 selector) external {
-        return MonuverseEpisode._emitMonumentalEvent(selector);
+    function emitOnlifeEvent(string calldata monumentalEvent) public onlyOwner {
+        _emitMonumentalEvent(keccak256(abi.encodePacked(monumentalEvent, "(bytes32,bytes32)")));
     }
 
     function chapterAllowsMint(uint256 quantity, uint256 minted) external view returns (bool) {
@@ -32,9 +32,5 @@ contract MonuverseEpisodeMock is MonuverseEpisode {
 
     function chapterMintLimit() internal view returns (uint256) {
         return MonuverseEpisode._chapterMintLimit();
-    }
-
-    function emitOnlifeMonumentalEvent(string calldata monumentalEvent) public onlyOwner {
-        _emitMonumentalEvent(keccak256(abi.encodePacked(monumentalEvent, "(bytes32,bytes32)")));
     }
 }
