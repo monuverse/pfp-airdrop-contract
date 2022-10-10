@@ -48,27 +48,16 @@ contract ArchOfPeaceEntropy is VRFConsumerBaseV2, Ownable {
         emit RandomnessRequested(requestId);
     }
 
-    // TODO delete code here
     function fulfillRandomWords(
         uint256, /* requestId */
         uint256[] memory randomWords
     ) internal virtual override {
         _entropy = randomWords[0];
-
         _fulfilling = false;
     }
 
     function updateVRFParams(VRFRequestParams calldata newParams) public onlyOwner {
         _vrfRequestParams = newParams;
-    }
-
-    function _injectEntropy(uint256 random) internal {
-        _entropy = random;
-    }
-
-    // TODO: delete
-    function _setFulfilling(bool isFulfilling) internal {
-        _fulfilling = isFulfilling;
     }
 
     function fulfilling() public view returns (bool) {

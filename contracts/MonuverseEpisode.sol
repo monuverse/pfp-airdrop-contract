@@ -3,10 +3,11 @@ pragma solidity 0.8.16;
 
 import "./IMonuverseEpisode.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 
 import "./DFA.sol";
 
-contract MonuverseEpisode is IMonuverseEpisode, Ownable {
+contract MonuverseEpisode is IMonuverseEpisode, Ownable, Pausable {
     using DFA for DFA.Dfa;
 
     /// @dev Episode Chapters
@@ -23,12 +24,22 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable {
         _;
     }
 
+    modifier onlyMintChapter() {
+        require(_chapters[_current].minting.limit > 0, "MonuverseEpisode: mint not allowed");
+        _;
+    }
+
     modifier onlyRevealChapter() {
         require(_chapters[_current].revealing, "MonuverseEpisode: reveal not allowed");
         _;
     }
 
-    modifier emitsRevealMonumentalEvent() {
+    modifier onlyFinalChapter() {
+        require(_branching.isAccepting(_current), "MonuverseEpisode: chapter not final");
+        _;
+    }
+
+    modifier emitsEpisodeRevealedEvent() {
         _;
         _emitMonumentalEvent(EpisodeRevealed.selector);
     }
@@ -147,7 +158,7 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable {
         return (aux, _current);
     }
 
-    function _emitMonumentalEvent(bytes32 selector) internal {
+    function _emitMonumentalEvent(bytes32 selector) internal whenNotPaused {
         (bytes32 prev, bytes32 current) = _tryTransition(selector);
 
         if (selector == ChapterMinted.selector) {

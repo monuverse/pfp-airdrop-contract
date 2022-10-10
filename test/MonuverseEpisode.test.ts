@@ -734,6 +734,10 @@ describe('CONTRACT MonuverseEpisode', async () => {
         }
     );
 
+    context('When Paused', () => {
+        it('MUST NOT allow Chapter transitioning');
+    });
+
     // context('Episode Environments', async () => {
     //     for (let i: number = 0; i < episode.length; i++) {
     //         context(`"${episode[i].label}"`, async () => {

@@ -13,7 +13,7 @@ contract ArchOfPeaceWhitelist is Ownable {
         _whitelistRoot = newWhitelistRoot;
     }
 
-    // TODO: FIX, require no if internal
+    // TODO: to discuss next audit
     function isAccountWhitelisted(
         address account,
         uint256 limit,

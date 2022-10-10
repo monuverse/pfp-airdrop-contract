@@ -32,61 +32,61 @@ type Transition = {
 
 const episode: Array<Chapter> = [
     {
-        label: 'The Big Monubang',
+        label: 'Introduction: The Big Bang',
         whitelisting: true,
         minting: { limit: 0, price: 0, rules: [], isOpen: false },
         revealing: false,
     },
     {
-        label: 'The Builders',
+        label: 'Chapter I: The Arch Builders',
         whitelisting: true,
         minting: { limit: 777, price: 0, rules: [], isOpen: false },
         revealing: false,
     },
     {
-        label: 'The Chosen Ones',
+        label: 'Chapter II: The Chosen Ones',
         whitelisting: true,
         minting: {
             limit: 3777,
             price: 0.09,
-            rules: [{ label: 'Builders', enabled: true, fixedPrice: true }],
+            rules: [{ label: 'Chapter I: The Arch Builders', enabled: true, fixedPrice: true }],
             isOpen: false,
         },
         revealing: false,
     },
     {
-        label: 'The Believers',
+        label: 'Chapter III: The Believers',
         whitelisting: false,
         minting: {
             limit: 7777,
             price: 0.11,
             rules: [
-                { label: 'Builders', enabled: true, fixedPrice: true },
-                { label: 'Chosen Ones', enabled: true, fixedPrice: false },
+                { label: 'Chapter I: The Arch Builders', enabled: true, fixedPrice: true },
+                { label: 'Chapter II: The Chosen Ones', enabled: true, fixedPrice: false },
             ],
             isOpen: false,
         },
         revealing: false,
     },
     {
-        label: 'The Brave',
+        label: 'Chapter IV: The Brave',
         whitelisting: false,
         minting: {
             limit: 7777,
             price: 0.12,
-            rules: [{ label: 'Builders', enabled: true, fixedPrice: true }],
+            rules: [{ label: 'Chapter I: The Arch Builders', enabled: true, fixedPrice: true }],
             isOpen: false,
         },
         revealing: false,
     },
     {
-        label: 'A Monumental Arch Reveal',
+        label: 'Chapter V: A Monumental Reveal',
         whitelisting: false,
         minting: { limit: 0, price: 0, rules: [], isOpen: false },
         revealing: true,
     },
     {
-        label: 'To The Monuverse',
+        label: 'Conclusion: Monuverse',
         whitelisting: false,
         minting: { limit: 0, price: 0, rules: [], isOpen: false },
         revealing: false,
@@ -95,39 +95,49 @@ const episode: Array<Chapter> = [
 
 const branching: Array<Transition> = [
     {
-        from: 'The Big Monubang',
+        from: 'Introduction: The Big Bang',
         event: 'EpisodeProgressedOnlife',
-        to: 'The Builders',
+        to: 'Chapter I: The Arch Builders',
     },
     {
-        from: 'The Builders',
+        from: 'Chapter I: The Arch Builders',
         event: 'EpisodeProgressedOnlife',
-        to: 'The Chosen Ones',
+        to: 'Chapter II: The Chosen Ones',
     },
     {
-        from: 'The Chosen Ones',
+        from: 'Chapter II: The Chosen Ones',
         event: 'EpisodeProgressedOnlife',
-        to: 'The Believers',
+        to: 'Chapter III: The Believers',
     },
     {
-        from: 'The Believers',
-        event: 'EpisodeProgressedOnlife',
-        to: 'The Brave',
-    },
-    {
-        from: 'The Brave',
-        event: 'EpisodeProgressedOnlife',
-        to: 'A Monumental Arch Reveal',
-    },
-    {
-        from: 'The Brave',
+        from: 'Chapter II: The Chosen Ones',
         event: 'EpisodeMinted',
-        to: 'A Monumental Arch Reveal',
+        to: 'Chapter V: A Monumental Reveal',
     },
     {
-        from: 'A Monumental Arch Reveal',
+        from: 'Chapter III: The Believers',
+        event: 'EpisodeProgressedOnlife',
+        to: 'Chapter IV: The Brave',
+    },
+    {
+        from: 'Chapter III: The Believers',
+        event: 'EpisodeMinted',
+        to: 'Chapter V: A Monumental Reveal',
+    },
+    {
+        from: 'Chapter IV: The Brave',
+        event: 'EpisodeProgressedOnlife',
+        to: 'Chapter V: A Monumental Reveal',
+    },
+    {
+        from: 'Chapter IV: The Brave',
+        event: 'EpisodeMinted',
+        to: 'Chapter V: A Monumental Reveal',
+    },
+    {
+        from: 'Chapter V: A Monumental Reveal',
         event: 'EpisodeRevealed',
-        to: 'To The Monuverse',
+        to: 'Conclusion: Monuverse',
     },
 ];
 
@@ -225,6 +235,8 @@ describe('CONTRACT ArchOfPeace', async () => {
             ).wait();
         }
     });
+
+    it('MUST only allow transfers after Mint is done');
 
     // context('Episode Environments', async () => {
     //     for (let i: number = 0; i < episode.length; i++) {

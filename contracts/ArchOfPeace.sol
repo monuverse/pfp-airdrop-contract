@@ -2,7 +2,6 @@
 pragma solidity 0.8.16;
 
 import "./MonuverseEpisode.sol";
-import "erc721psi/contracts/ERC721Psi.sol";
 import "erc721psi/contracts/extension/ERC721PsiBurnable.sol";
 import "./ArchOfPeaceEntropy.sol";
 import "./ArchOfPeaceWhitelist.sol";
@@ -50,11 +49,16 @@ import "@openzeppelin/contracts/utils/Strings.sol";
  * @dev each transition follows the onchain programmable story branching;
  * @dev episode branching is a configurable Deterministic Finite Automata.
  */
-contract ArchOfPeace is MonuverseEpisode, ERC721Psi, ArchOfPeaceEntropy, ArchOfPeaceWhitelist {
+contract ArchOfPeace is
+    MonuverseEpisode,
+    ArchOfPeaceEntropy,
+    ArchOfPeaceWhitelist,
+    ERC721PsiBurnable
+{
     using FPEMap for uint256;
     using Strings for uint256;
 
-    uint256 private immutable _maxSupply;
+    uint256 private _maxSupply;
 
     string private _archVeilURI;
     string private _archBaseURI;
@@ -70,9 +74,9 @@ contract ArchOfPeace is MonuverseEpisode, ERC721Psi, ArchOfPeaceEntropy, ArchOfP
         bytes32 vrfGasLane_,
         uint64 vrfSubscriptionId_
     )
-        ERC721Psi(name_, symbol_)
         MonuverseEpisode(initialChapter_)
         ArchOfPeaceEntropy(vrfCoordinator_, vrfGasLane_, vrfSubscriptionId_)
+        ERC721Psi(name_, symbol_)
     {
         _maxSupply = maxSupply_;
         _archVeilURI = archVeilURI_;
@@ -84,15 +88,18 @@ contract ArchOfPeace is MonuverseEpisode, ERC721Psi, ArchOfPeaceEntropy, ArchOfP
         uint256 limit,
         bytes32 group,
         bytes32[] memory proof
-    ) public payable {
+    ) public payable whenNotPaused {
         if (!_chapterAllowsOpenMint()) {
             require(
-                isAccountWhitelisted(_msgSender(), limit, group, proof),
+                isAccountWhitelisted(limit, group, proof),
                 "ArchOfPeace: sender not whitelisted"
             );
         }
         require(entropy() == 0, "ArchOfPeace: already revealed");
-        require(_isQuantityWhitelisted(balanceOf(_msgSender()), quantity, limit), "ArchOfPeace: quantity not allowed" );
+        require(
+            _isQuantityWhitelisted(balanceOf(_msgSender()), quantity, limit),
+            "ArchOfPeace: quantity not allowed"
+        );
         require(_chapterAllowsMint(quantity, _minted), "ArchOfPeace: no mint chapter");
         require(_chapterAllowsMintGroup(group), "ArchOfPeace: group not allowed");
         require(_chapterMatchesOffer(quantity, msg.value, group), "ArchOfPeace: offer unmatched");
@@ -111,7 +118,7 @@ contract ArchOfPeace is MonuverseEpisode, ERC721Psi, ArchOfPeaceEntropy, ArchOfP
     }
 
     /**
-     * @notice Reveals the entire collection when call effects are successful
+     * @notice Reveals the entire collection when call effects are successful.
      *
      * @dev Requests a random seed that will be fulfilled in the future;
      * @dev seed will be used to randomly map token ids to metadata ids;
@@ -119,23 +126,37 @@ contract ArchOfPeace is MonuverseEpisode, ERC721Psi, ArchOfPeaceEntropy, ArchOfP
      * @dev that is, if seed is still default value and not waiting for any request;
      * @dev callable by anyone at any moment only during Reveal Chapter.
      */
-    function reveal() external onlyRevealChapter {
+    function reveal() external onlyRevealChapter whenNotPaused {
         require(entropy() == 0, "ArchOfPeace: already revealed");
         require(!fulfilling(), "ArchOfPeace: currently fulfilling");
 
         _requestRandomWord();
     }
 
-    function fulfillRandomWords(
-        uint256,
-        uint256[] memory randomWords
-    ) internal override emitsRevealMonumentalEvent {
-        _injectEntropy(randomWords[0]);
+    function fulfillRandomWords(uint256, uint256[] memory randomWords)
+        internal
+        override
+        emitsEpisodeRevealedEvent
+    {
+        super.fulfillRandomWords(0, randomWords);
+    }
 
-        // TODO eliminate setfulfilling and call overriden function
-        // super.fulfillRandomWords();
+    function sealMinting() external onlyMintChapter onlyOwner returns (uint256) {
+        _maxSupply = _minted;
 
-        _setFulfilling(false);
+        _emitMonumentalEvent(EpisodeMinted.selector);
+
+        return _maxSupply;
+    }
+
+    function burn(uint256 tokenId) external onlyOwner {
+        super._burn(tokenId);
+    }
+
+    function withdraw() external onlyOwner {
+        (bool success, ) = payable(owner()).call{value: address(this).balance}("");
+
+        require(success, "ArchOfPeace: withdrawal unsuccessful");
     }
 
     /**
@@ -163,9 +184,12 @@ contract ArchOfPeace is MonuverseEpisode, ERC721Psi, ArchOfPeaceEntropy, ArchOfP
                 );
     }
 
-    function withdraw() external onlyOwner {
-        (bool success, ) = payable(owner()).call{value: address(this).balance}("");
-
-        require(success, "ArchOfPeace: withdrawal unsuccessful");
+    function _beforeTokenTransfers(
+        address from,
+        address to,
+        uint256 startTokenId,
+        uint256 quantity
+    ) internal override onlyFinalChapter {
+        super._beforeTokenTransfers(from, to, startTokenId, quantity);
     }
 }
