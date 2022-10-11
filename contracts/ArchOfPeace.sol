@@ -83,6 +83,15 @@ contract ArchOfPeace is
         _archBaseURI = archBaseURI_;
     }
 
+    function setWhitelistRoot(bytes32 newWhitelistRoot)
+        public
+        override
+        onlyWhitelistingChapter
+        onlyOwner
+    {
+        super.setWhitelistRoot(newWhitelistRoot);
+    }
+
     function mint(
         uint256 quantity,
         uint256 limit,
@@ -126,7 +135,7 @@ contract ArchOfPeace is
      * @dev that is, if seed is still default value and not waiting for any request;
      * @dev callable by anyone at any moment only during Reveal Chapter.
      */
-    function reveal() external onlyRevealChapter whenNotPaused {
+    function reveal() public onlyRevealChapter whenNotPaused {
         require(entropy() == 0, "ArchOfPeace: already revealed");
         require(!fulfilling(), "ArchOfPeace: currently fulfilling");
 
@@ -142,14 +151,17 @@ contract ArchOfPeace is
     }
 
     function sealMinting() external onlyMintChapter onlyOwner returns (uint256) {
-        _maxSupply = _minted;
+        // require(_minted > 0, "ArchOfPeace: no token minted");
 
+        _maxSupply = _minted;
         _emitMonumentalEvent(EpisodeMinted.selector);
 
         return _maxSupply;
     }
 
-    function burn(uint256 tokenId) external onlyOwner {
+    function burn(uint256 tokenId) public {
+        require(_msgSender() == ownerOf(tokenId), "ArchOfPeace: sender not token owner");
+
         super._burn(tokenId);
     }
 
@@ -158,6 +170,8 @@ contract ArchOfPeace is
 
         require(success, "ArchOfPeace: withdrawal unsuccessful");
     }
+
+    // TODO: pause/unpause
 
     /**
      * @notice Obtains mapped URI for an existing token.

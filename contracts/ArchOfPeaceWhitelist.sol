@@ -9,11 +9,10 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract ArchOfPeaceWhitelist is Ownable {
     bytes32 private _whitelistRoot;
 
-    function setWhitelistRoot(bytes32 newWhitelistRoot) public onlyOwner {
+    function setWhitelistRoot(bytes32 newWhitelistRoot) public virtual onlyOwner {
         _whitelistRoot = newWhitelistRoot;
     }
 
-    // TODO: to discuss next audit
     function isAccountWhitelisted(
         address account,
         uint256 limit,

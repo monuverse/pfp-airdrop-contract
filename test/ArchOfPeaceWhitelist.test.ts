@@ -17,57 +17,26 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { MerkleTree } from 'merkletreejs';
 import { keccak256 } from 'ethers/lib/utils';
 
-export type whitelistRecord = {
-    account: SignerWithAddress;
-    limit: number;
-    chapter: Buffer;
-};
-
-const toWhitelistLeaf = (
-    address: string,
-    limit: number,
-    chapter: Buffer
-): Buffer => {
-    return Buffer.from(
-        ethers.utils
-            .solidityKeccak256(
-                ['address', 'uint256', 'bytes32'],
-                [address, limit, chapter]
-            )
-            .slice(2),
-        'hex'
-    );
-};
-
-const hashStr = (value: string) => {
-    return Buffer.from(
-        ethers.utils.solidityKeccak256(['string'], [value]).slice(2),
-        'hex'
-    );
-};
+import { whitelistRecord, toWhitelistLeaf, buffHashStr } from './common';
 
 describe('CONTRACT ArchOfPeaceWhitelist', () => {
-    let monuverse: SignerWithAddress;
-    let chad: whitelistRecord; // chad, always whitelisted
-    let hacker: SignerWithAddress; // hacker, always out of the whitelist
-    let users: SignerWithAddress[]; // users may enter/exit whitelist
+    let owner: SignerWithAddress;
+    let hacker: SignerWithAddress; // always out of the whitelist
+    let users: SignerWithAddress[]; // may enter/exit whitelist
 
     let whitelist: whitelistRecord[];
     let whitelistTree: MerkleTree;
 
-    const preRevealUri = 'preRevealURI';
-    let archOfLight: Contract;
+    let archOfPeaceWl: Contract;
 
-    const chapter: Buffer = hashStr('builders');
+    const chapter: Buffer = buffHashStr('builders');
 
     before(async () => {
-        [monuverse, hacker, ...users] = await ethers.getSigners();
+        [owner, hacker, ...users] = await ethers.getSigners();
 
         whitelist = users
             .slice(0, 8)
             .map((user) => ({ account: user, limit: 2, chapter: chapter }));
-
-        chad = whitelist[0];
 
         let whitelistLeaves = whitelist.map((user) =>
             toWhitelistLeaf(user.account.address, user.limit, user.chapter)
@@ -79,16 +48,16 @@ describe('CONTRACT ArchOfPeaceWhitelist', () => {
 
         let whitelistRoot = whitelistTree.getRoot();
 
-        const ArchOfLight = await ethers.getContractFactory(
+        const ArchOfPeaceWhitelist = await ethers.getContractFactory(
             'ArchOfPeaceWhitelist'
         );
-        archOfLight = await ArchOfLight.deploy();
+        archOfPeaceWl = await ArchOfPeaceWhitelist.deploy();
 
-        await archOfLight.deployed();
+        await archOfPeaceWl.deployed();
 
-        archOfLight.setWhitelistRoot(whitelistRoot);
+        archOfPeaceWl.setWhitelistRoot(whitelistRoot);
 
-        const deployedRoot = (await archOfLight.whitelistRoot()).slice(2);
+        const deployedRoot = (await archOfPeaceWl.whitelistRoot()).slice(2);
         const offChainRoot = whitelistTree.getRoot().toString('hex');
 
         assert.equal(
@@ -109,7 +78,7 @@ describe('CONTRACT ArchOfPeaceWhitelist', () => {
             whitelistTree.getLeaves()[0]
         );
 
-        const isWhitelisted = await archOfLight[
+        const isWhitelisted = await archOfPeaceWl[
             'isAccountWhitelisted(address,uint256,bytes32,bytes32[])'
         ](
             whitelist[0].account.address,
@@ -118,7 +87,7 @@ describe('CONTRACT ArchOfPeaceWhitelist', () => {
             hexProof
         );
 
-        const hackerIsWhitelisted = await archOfLight[
+        const hackerIsWhitelisted = await archOfPeaceWl[
             'isAccountWhitelisted(address,uint256,bytes32,bytes32[])'
         ](hacker.address, 1, chapter, hexProof);
 
@@ -150,7 +119,7 @@ describe('CONTRACT ArchOfPeaceWhitelist', () => {
         );
 
         const oldRoot = whitelistTree.getRoot();
-        const oldOnchainRoot = (await archOfLight.whitelistRoot()).slice(2);
+        const oldOnchainRoot = (await archOfPeaceWl.whitelistRoot()).slice(2);
 
         whitelistTree.addLeaf(newLeaf);
         const newRoot = whitelistTree.getRoot();
@@ -163,14 +132,14 @@ describe('CONTRACT ArchOfPeaceWhitelist', () => {
         );
 
         await expect(
-            archOfLight.connect(hacker).setWhitelistRoot(newRoot)
+            archOfPeaceWl.connect(hacker).setWhitelistRoot(newRoot)
         ).to.be.revertedWith('Ownable: caller is not the owner');
 
         await (
-            await archOfLight.connect(monuverse).setWhitelistRoot(newRoot)
+            await archOfPeaceWl.connect(owner).setWhitelistRoot(newRoot)
         ).wait();
 
-        const newOnchainRoot = (await archOfLight.whitelistRoot()).slice(2);
+        const newOnchainRoot = (await archOfPeaceWl.whitelistRoot()).slice(2);
 
         expect(newOnchainRoot).to.equal(newRoot.toString('hex'));
     });
@@ -186,7 +155,7 @@ describe('CONTRACT ArchOfPeaceWhitelist', () => {
             whitelistTree.getLeaves()[0]
         );
 
-        const isWhitelisted = await archOfLight[
+        const isWhitelisted = await archOfPeaceWl[
             'isAccountWhitelisted(address,uint256,bytes32,bytes32[])'
         ](
             whitelist[0].account.address,
@@ -195,7 +164,7 @@ describe('CONTRACT ArchOfPeaceWhitelist', () => {
             hexProof
         );
 
-        const hackerIsWhitelisted = await archOfLight[
+        const hackerIsWhitelisted = await archOfPeaceWl[
             'isAccountWhitelisted(address,uint256,bytes32,bytes32[])'
         ](hacker.address, 1, chapter, hexProof);
 
@@ -212,7 +181,7 @@ describe('CONTRACT ArchOfPeaceWhitelist', () => {
         );
 
         await expect(
-            archOfLight
+            archOfPeaceWl
                 .connect(hacker)
                 ['isAccountWhitelisted(address,uint256,bytes32,bytes32[])'](
                     victim.account.address,
@@ -223,7 +192,7 @@ describe('CONTRACT ArchOfPeaceWhitelist', () => {
         ).to.be.revertedWith('ArchOfPeaceWhitelist: account check forbidden');
 
         await expect(
-            archOfLight
+            archOfPeaceWl
                 .connect(whitelistedHacker.account)
                 ['isAccountWhitelisted(address,uint256,bytes32,bytes32[])'](
                     victim.account.address,
@@ -234,7 +203,7 @@ describe('CONTRACT ArchOfPeaceWhitelist', () => {
         ).to.be.revertedWith('ArchOfPeaceWhitelist: account check forbidden');
 
         expect(
-            await archOfLight
+            await archOfPeaceWl
                 .connect(victim.account)
                 ['isAccountWhitelisted(address,uint256,bytes32,bytes32[])'](
                     victim.account.address,
@@ -245,7 +214,7 @@ describe('CONTRACT ArchOfPeaceWhitelist', () => {
         ).to.equal(true);
 
         expect(
-            await archOfLight
+            await archOfPeaceWl
                 .connect(hacker)
                 ['isAccountWhitelisted(address,uint256,bytes32,bytes32[])'](
                     hacker.address,

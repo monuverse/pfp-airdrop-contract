@@ -4,31 +4,7 @@ import { ethers } from 'hardhat';
 import { Contract, BigNumber } from 'ethers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
-type MintGroupRules = {
-    label: string;
-    enabled: boolean;
-    fixedPrice: boolean;
-};
-
-type Minting = {
-    limit: number;
-    price: number;
-    rules: Array<MintGroupRules>;
-    isOpen: boolean;
-};
-
-type Chapter = {
-    label: string;
-    minting: Minting;
-    whitelisting: boolean;
-    revealing: boolean;
-};
-
-type Transition = {
-    from: string;
-    event: string;
-    to: string;
-};
+import { MintGroupRules, Chapter, Transition } from './common';
 
 const episode: Array<Chapter> = [
     {

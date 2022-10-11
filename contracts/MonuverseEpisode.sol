@@ -24,6 +24,11 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable, Pausable {
         _;
     }
 
+    modifier onlyWhitelistingChapter() {
+        require(_chapters[_current].whitelisting, "MonuverseEpisode: whitelisting not allowed");
+        _;
+    }
+
     modifier onlyMintChapter() {
         require(_chapters[_current].minting.limit > 0, "MonuverseEpisode: mint not allowed");
         _;

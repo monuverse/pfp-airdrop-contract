@@ -31,7 +31,17 @@ const config: HardhatUserConfig = {
     },
 
     networks: {
-        hardhat: {},
+        hardhat: {
+            accounts: {
+                mnemonic:
+                    'monu verse arch peace light big bang builders chosen reveal scalable random',
+                initialIndex: 0,
+                count: 101,
+                path: "m/44'/60'/0'/0",
+                accountsBalance: '10000000000000000000000',
+                passphrase: '',
+            },
+        },
 
         goerli: {
             url: process.env.DEV_GOERLI_RPC || '',

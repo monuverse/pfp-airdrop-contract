@@ -1,19 +1,12 @@
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { Contract } from 'ethers';
+import { hashStr, hashNum } from './common';
 
 type Transition = {
     from: number;
     to: number;
     symbol: string;
-};
-
-const hashNum = (value: number) => {
-    return ethers.utils.solidityKeccak256(['uint256'], [value]);
-};
-
-const hashStr = (value: string) => {
-    return ethers.utils.solidityKeccak256(['string'], [value]);
 };
 
 describe('LIBRARY Deterministic Finite Automata', () => {

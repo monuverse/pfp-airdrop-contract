@@ -1,34 +1,20 @@
 import { expect } from 'chai';
 
 import { ethers } from 'hardhat';
-import { Contract, BigNumber } from 'ethers';
+import { Contract } from 'ethers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
-type MintGroupRules = {
-    label: string;
-    enabled: boolean;
-    fixedPrice: boolean;
-};
+import { MerkleTree } from 'merkletreejs';
+import { keccak256 } from 'ethers/lib/utils';
 
-type Minting = {
-    limit: number;
-    price: number;
-    rules: Array<MintGroupRules>;
-    isOpen: boolean;
-};
-
-type Chapter = {
-    label: string;
-    minting: Minting;
-    whitelisting: boolean;
-    revealing: boolean;
-};
-
-type Transition = {
-    from: string;
-    event: string;
-    to: string;
-};
+import {
+    Chapter,
+    Transition,
+    whitelistRecord,
+    toWhitelistLeaf,
+    writeEpisode,
+    buffHashStr,
+} from './common';
 
 const episode: Array<Chapter> = [
     {
@@ -45,11 +31,17 @@ const episode: Array<Chapter> = [
     },
     {
         label: 'Chapter II: The Chosen Ones',
-        whitelisting: true,
+        whitelisting: false,
         minting: {
             limit: 3777,
             price: 0.09,
-            rules: [{ label: 'Chapter I: The Arch Builders', enabled: true, fixedPrice: true }],
+            rules: [
+                {
+                    label: 'Chapter I: The Arch Builders',
+                    enabled: true,
+                    fixedPrice: true,
+                },
+            ],
             isOpen: false,
         },
         revealing: false,
@@ -61,8 +53,16 @@ const episode: Array<Chapter> = [
             limit: 7777,
             price: 0.11,
             rules: [
-                { label: 'Chapter I: The Arch Builders', enabled: true, fixedPrice: true },
-                { label: 'Chapter II: The Chosen Ones', enabled: true, fixedPrice: false },
+                {
+                    label: 'Chapter I: The Arch Builders',
+                    enabled: true,
+                    fixedPrice: true,
+                },
+                {
+                    label: 'Chapter II: The Chosen Ones',
+                    enabled: true,
+                    fixedPrice: false,
+                },
             ],
             isOpen: false,
         },
@@ -74,7 +74,13 @@ const episode: Array<Chapter> = [
         minting: {
             limit: 7777,
             price: 0.12,
-            rules: [{ label: 'Chapter I: The Arch Builders', enabled: true, fixedPrice: true }],
+            rules: [
+                {
+                    label: 'Chapter I: The Arch Builders',
+                    enabled: true,
+                    fixedPrice: true,
+                },
+            ],
             isOpen: false,
         },
         revealing: false,
@@ -92,6 +98,8 @@ const episode: Array<Chapter> = [
         revealing: false,
     },
 ];
+
+const mintChapterProportions: Array<number> = [2, 10, 40, 70, 100];
 
 const branching: Array<Transition> = [
     {
@@ -141,126 +149,198 @@ const branching: Array<Transition> = [
     },
 ];
 
+const paths: Array<Array<Transition>> = [
+    [branching[0], branching[1], branching[3], branching[8]],
+    [branching[0], branching[1], branching[2], branching[5], branching[8]],
+    [
+        branching[0],
+        branching[1],
+        branching[2],
+        branching[4],
+        branching[7],
+        branching[8],
+    ],
+    [
+        branching[0],
+        branching[1],
+        branching[2],
+        branching[4],
+        branching[6],
+        branching[8],
+    ],
+];
+
 describe('CONTRACT ArchOfPeace', async () => {
-    // Actors that will interact with Smartcontracts
-    let monuverse: SignerWithAddress;
-    let hacker: SignerWithAddress;
-    let users: SignerWithAddress[];
+    for (let p: number = 0; p < paths.length; p++) {
+        const path = paths[p];
 
-    // Arch Of Peace
-    const name: string = 'Monutest';
-    const symbol: string = 'MNT';
-    const veilURI: string = 'test:veilURI_unique';
-    const baseURI: string = 'test:baseURI_';
-    const maxSupply: number = 77;
-    let archOfPeace: Contract;
+        // Actors that will interact with Smartcontracts
+        let monuverse: SignerWithAddress;
+        let hacker: SignerWithAddress;
+        let users: SignerWithAddress[];
 
-    // Chapters
-    // const chapters
+        let whitelist: whitelistRecord[];
+        let whitelistTree: MerkleTree;
+        let whitelistRoot: Buffer;
 
-    /**
-     *  before start
-     *      ...DFA config
-     *  after start
-     *      before reveal
-     *          ...minting
-     *      after reveal
-     *          !...minting
-     */
+        // Arch Of Peace
+        const name: string = 'Monutest';
+        const symbol: string = 'MNT';
+        const veilURI: string = 'test:veilURI_unique';
+        const baseURI: string = 'test:baseURI_';
+        const maxSupply: number = 77;
+        let archOfPeace: Contract;
 
-    // Chainlink VRF V2
-    const vrfSubscriptionId: number = 1;
-    const vrfGaslane: Buffer = Buffer.from(
-        'd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc',
-        'hex'
-    );
-    let vrfCoordinatorV2Mock: Contract;
-
-    before(async () => {
-        [monuverse, hacker, ...users] = await ethers.getSigners();
-
-        const VRFCoordinatorV2Mock = await ethers.getContractFactory(
-            'VRFCoordinatorV2Mock'
+        // Chainlink VRF V2
+        const vrfSubscriptionId: number = 1;
+        const vrfGaslane: Buffer = Buffer.from(
+            'd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc',
+            'hex'
         );
-        vrfCoordinatorV2Mock = await VRFCoordinatorV2Mock.deploy(0, 0);
-        await vrfCoordinatorV2Mock.deployed();
-        await vrfCoordinatorV2Mock.createSubscription();
-        await vrfCoordinatorV2Mock.fundSubscription(
-            vrfSubscriptionId,
-            ethers.utils.parseEther('5')
-        );
+        let vrfCoordinatorV2Mock: Contract;
 
-        const ArchOfPeace = await ethers.getContractFactory('ArchOfPeace');
-        archOfPeace = await ArchOfPeace.deploy(
-            maxSupply,
-            name,
-            symbol,
-            veilURI,
-            baseURI,
-            episode[0].label,
-            vrfCoordinatorV2Mock.address,
-            vrfGaslane,
-            vrfSubscriptionId
-        );
-        await archOfPeace.deployed();
+        before(async () => {
+            [monuverse, hacker, ...users] = await ethers.getSigners();
 
-        vrfCoordinatorV2Mock.addConsumer(
-            vrfSubscriptionId,
-            archOfPeace.address
-        );
-    });
+            for (let i: number = 1; i < mintChapterProportions.length; i++) {
+                whitelist = users
+                    .slice(
+                        mintChapterProportions[i - 1],
+                        mintChapterProportions[i]
+                    )
+                    .map((user) => ({
+                        account: user,
+                        limit: 3,
+                        chapter: buffHashStr(episode[i].label),
+                    }));
+            }
 
-    beforeEach(async () => {
-        await archOfPeace.connect(monuverse);
-    });
+            let whitelistLeaves = whitelist.map((user) =>
+                toWhitelistLeaf(user.account.address, user.limit, user.chapter)
+            );
 
-    // context('Episode is being built');
+            whitelistTree = new MerkleTree(whitelistLeaves, keccak256, {
+                sortPairs: true,
+            });
 
-    // transform into before each after transition?
+            whitelistRoot = whitelistTree.getRoot();
 
-    it('MUST write all Episode Chapters', async () => {
-        for (let i: number = 0; i < episode.length; i++) {
-            await (
-                await archOfPeace.writeChapter(
-                    episode[i].label,
-                    episode[i].whitelisting,
-                    episode[i].minting.limit,
-                    ethers.utils.parseUnits(
-                        episode[0].minting.price.toString(),
-                        'ether'
-                    ),
-                    episode[i].minting.isOpen,
-                    episode[i].revealing
-                )
-            ).wait();
-        }
-    });
+            const VRFCoordinatorV2Mock = await ethers.getContractFactory(
+                'VRFCoordinatorV2Mock'
+            );
+            vrfCoordinatorV2Mock = await VRFCoordinatorV2Mock.deploy(0, 0);
+            await vrfCoordinatorV2Mock.deployed();
+            await vrfCoordinatorV2Mock.createSubscription();
+            await vrfCoordinatorV2Mock.fundSubscription(
+                vrfSubscriptionId,
+                ethers.utils.parseEther('5')
+            );
+
+            const ArchOfPeace = await ethers.getContractFactory('ArchOfPeace');
+            archOfPeace = await ArchOfPeace.deploy(
+                maxSupply,
+                name,
+                symbol,
+                veilURI,
+                baseURI,
+                episode[0].label,
+                vrfCoordinatorV2Mock.address,
+                vrfGaslane,
+                vrfSubscriptionId
+            );
+            await archOfPeace.deployed();
+
+            vrfCoordinatorV2Mock.addConsumer(
+                vrfSubscriptionId,
+                archOfPeace.address
+            );
+
+            await writeEpisode(archOfPeace, episode, branching);
+        });
+
+        context(`\nEpisode Path #${p + 1}`, () => {
+            for (let t: number = 0; t < path.length; t++) {
+                const chapter: Chapter =
+                    episode[
+                        episode.findIndex(
+                            (chapter) => chapter.label == path[t].from
+                        )
+                    ];
+
+                context(`Chapter "${chapter.label}"`, () => {
+                    chapter.whitelisting
+                        ? it('MUST allow whitelisting', async () => {
+                              // TODO: check if whitelistRoot != 0 when transitioning
+                              await (
+                                  await archOfPeace.setWhitelistRoot(
+                                      whitelistRoot
+                                  )
+                              ).wait();
+                          })
+                        : it('MUST NOT allow whitelisting', async () =>
+                              await expect(
+                                  archOfPeace.setWhitelistRoot(whitelistRoot)
+                              ).to.be.revertedWith(
+                                  'MonuverseEpisode: whitelisting not allowed'
+                              ));
+
+                    chapter.minting.limit > 0
+                        ? it('MUST allow minting', async () => {})
+                        : it('MUST NOT allow minting', async () => {
+                              //   const hexProof = whitelistTree.getHexProof(
+                              //       whitelistTree.getLeaves()[0]
+                              //   );
+                              //   await expect(
+                              //       archOfPeace.mint(3, 3)
+                              //   ).to.be.revertedWith(
+                              //       'ArchOfPeace: no mint chapter'
+                              //   );
+                          });
+
+                    if (chapter.revealing) {
+                        it('MUST allow requesting reveal seed');
+
+                        it(
+                            'MUST NOT allow another reveal request if seed is fulfilling'
+                        );
+
+                        it('MUST successfully reveal Episode tokens');
+
+                        it(
+                            'MUST NOT allow another reveal request if seed is fulfilled'
+                        );
+                    } else {
+                        it('MUST NOT allow revealing', async () => {
+                            await expect(
+                                archOfPeace.reveal()
+                            ).to.be.revertedWith(
+                                'MonuverseEpisode: reveal not allowed'
+                            );
+                        });
+                    }
+
+                    it('MUST transit into the right next Chapter', async () => {
+                        if (path[t].event == 'EpisodeMinted') {
+                            await expect(archOfPeace.sealMinting()).to.emit(
+                                archOfPeace,
+                                'EpisodeMinted'
+                            );
+                        } else if (path[t].event == 'EpisodeProgressedOnlife') {
+                            await expect(archOfPeace.emitOnlifeEvent()).to.emit(
+                                archOfPeace,
+                                'EpisodeProgressedOnlife'
+                            );
+                        }
+                    });
+                });
+            }
+        });
+    }
 
     it('MUST only allow transfers after Mint is done');
 
-    // context('Episode Environments', async () => {
-    //     for (let i: number = 0; i < episode.length; i++) {
-    //         context(`Chapter "${episode[i].label}"`, async () => {
-    //             episode[i].whitelisting
-    //                 ? it('MUST allow whitelisting', async () => {})
-    //                 : it('MUST NOT allow whitelisting');
-
-    //             episode[i].minting.limit > 0
-    //                 ? it('Must allow minting')
-    //                 : it('MUST NOT allow minting');
-
-    //             episode[i].revealing
-    //                 ? it('MUST allow revealing', async () => {
-    //                       // expect minting to be disabled
-    //                   })
-    //                 : it('MUST NOT allow revealing');
-    //         });
-    //     }
-    // });
-    // context('Episode Transitions');
-
-    context('Before Reveal', () => {
-        it('MUST allow all users to mint multiple tokens at once'
+    it(
+        'MUST allow all users to mint multiple tokens at once'
         // , async () => {
         //     const userAllocation = Math.floor(maxSupply / users.length);
 
@@ -275,17 +355,18 @@ describe('CONTRACT ArchOfPeace', async () => {
         //         );
         //     }
         // }
-        );
+    );
 
-        it('MUST only show unrevealed arch', async () => {
-            const totalSupply: number = await archOfPeace.totalSupply();
+    // it('MUST only show unrevealed arch', async () => {
+    //     const totalSupply: number = await archOfPeace.totalSupply();
 
-            for (let i: number = 0; i < totalSupply; i++) {
-                expect(await archOfPeace.tokenURI(i)).to.equal(veilURI);
-            }
-        });
+    //     for (let i: number = 0; i < totalSupply; i++) {
+    //         expect(await archOfPeace.tokenURI(i)).to.equal(veilURI);
+    //     }
+    // });
 
-        it('MUST reveal successfully (i.e. receive randomness successfully)'
+    it(
+        'MUST reveal successfully (i.e. receive randomness successfully)'
         // , async () => {
         //     const requestId: BigNumber = BigNumber.from(1);
 
@@ -301,11 +382,10 @@ describe('CONTRACT ArchOfPeace', async () => {
         //         )
         //     ).to.emit(vrfCoordinatorV2Mock, 'RandomWordsFulfilled');
         // }
-        );
-    });
+    );
 
-    context('After Reveal', () => {
-        it('MUST show each token as revealed Arch of Peace'
+    it(
+        'MUST show each token as revealed Arch of Peace'
         // , async () => {
         //     const totalSupply: number = await archOfPeace.totalSupply();
 
@@ -328,13 +408,16 @@ describe('CONTRACT ArchOfPeace', async () => {
         //     expect(Math.min(...mappedMetadataIds)).to.equal(0);
         //     expect(Math.max(...mappedMetadataIds)).to.equal(totalSupply - 1);
         // }
-        );
+    );
 
-        it('MUST NOT allow another reveal');
+    it('MUST NOT allow another reveal');
 
-        it('MUST allow token burn');
-    });
+    it('MUST allow token burn');
 });
 
-// dfa
-//
+// const paths: Array<Array<number>> = [
+//     [0, 0, 1, 0],
+//     [0, 0, 0, 1, 0],
+//     [0, 0, 0, 0, 1, 0],
+//     [0, 0, 0, 0, 0, 0],
+// ];
