@@ -12,12 +12,14 @@ const episode: Array<Chapter> = [
         whitelisting: true,
         minting: { limit: 0, price: 0, rules: [], isOpen: false },
         revealing: false,
+        isConclusion: false,
     },
     {
         label: 'Chapter I: Mint Test A',
         whitelisting: true,
         minting: { limit: 777, price: 0, rules: [], isOpen: false },
         revealing: false,
+        isConclusion: false,
     },
     {
         label: 'Chapter II: Mint Test B',
@@ -35,6 +37,7 @@ const episode: Array<Chapter> = [
             isOpen: false,
         },
         revealing: false,
+        isConclusion: false,
     },
     {
         label: 'Chapter III: Mint Test C',
@@ -57,18 +60,21 @@ const episode: Array<Chapter> = [
             isOpen: false,
         },
         revealing: false,
+        isConclusion: false,
     },
     {
         label: 'Chapter IV: Reveal Test',
         whitelisting: false,
         minting: { limit: 0, price: 0, rules: [], isOpen: false },
         revealing: false,
+        isConclusion: false,
     },
     {
         label: 'Conclusion: Final Chapter',
         whitelisting: false,
         minting: { limit: 0, price: 0, rules: [], isOpen: false },
         revealing: false,
+        isConclusion: true,
     },
 ];
 
@@ -179,7 +185,8 @@ describe('CONTRACT MonuverseEpisode', async () => {
                             'ether'
                         ),
                         episode[i].minting.isOpen,
-                        episode[i].revealing
+                        episode[i].revealing,
+                        episode[i].isConclusion
                     )
                 )
                     .to.emit(monuverseEpisode, 'ChapterWritten')
@@ -192,7 +199,8 @@ describe('CONTRACT MonuverseEpisode', async () => {
                             'ether'
                         ),
                         episode[i].minting.isOpen,
-                        episode[i].revealing
+                        episode[i].revealing,
+                        episode[i].isConclusion
                     );
             }
         });
@@ -209,7 +217,8 @@ describe('CONTRACT MonuverseEpisode', async () => {
                             'ether'
                         ),
                         episode[i].minting.isOpen,
-                        episode[i].revealing
+                        episode[i].revealing,
+                        episode[i].isConclusion
                     )
                 )
                     .to.emit(monuverseEpisode, 'ChapterWritten')
@@ -222,7 +231,8 @@ describe('CONTRACT MonuverseEpisode', async () => {
                             'ether'
                         ),
                         episode[i].minting.isOpen,
-                        episode[i].revealing
+                        episode[i].revealing,
+                        episode[i].isConclusion
                     );
             }
         });
@@ -240,7 +250,8 @@ describe('CONTRACT MonuverseEpisode', async () => {
                             'ether'
                         ),
                         episode[0].minting.isOpen,
-                        episode[0].revealing
+                        episode[0].revealing,
+                        episode[0].isConclusion
                     )
             ).to.be.revertedWith(senderNotOwnerError));
 
@@ -250,6 +261,7 @@ describe('CONTRACT MonuverseEpisode', async () => {
                 whitelisting: false,
                 minting: { limit: 10, price: 0, rules: [], isOpen: false },
                 revealing: true,
+                isConclusion: false,
             };
 
             await expect(
@@ -262,7 +274,8 @@ describe('CONTRACT MonuverseEpisode', async () => {
                         'ether'
                     ),
                     brokenChapter.minting.isOpen,
-                    brokenChapter.revealing
+                    brokenChapter.revealing,
+                    brokenChapter.isConclusion,
                 )
             ).to.revertedWith('MonuverseEpisode: reveal with mint forbidden');
         });
@@ -457,7 +470,8 @@ describe('CONTRACT MonuverseEpisode', async () => {
                         'ether'
                     ),
                     episode[0].minting.isOpen,
-                    episode[0].revealing
+                    episode[0].revealing,
+                    episode[0].isConclusion
                 )
             ).to.be.revertedWith(updatesForbiddenError);
 
@@ -571,6 +585,8 @@ describe('CONTRACT MonuverseEpisode', async () => {
                     ['emitOnlifeEvent(string)']('EpisodeMinted')
             ).to.be.revertedWith(senderNotOwnerError);
         });
+
+        it('MUST NOT allow whitelisting, minting or revealing in Final Chapter')
 
         it('COULD NOT transition away from Final Chapter');
     });
@@ -725,7 +741,7 @@ describe('CONTRACT MonuverseEpisode', async () => {
     //                 ? it('Must allow minting')
     //                 : it('MUST NOT allow minting');
 
-    //             episode[i].revealing
+    //             episode[i].revealing, episode[i].isConclusion
     //                 ? it('MUST allow revealing', async () => {
     //                       // expect minting to be disabled
     //                   })

@@ -39,8 +39,10 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable, Pausable {
         _;
     }
 
-    modifier onlyFinalChapter() {
-        require(_branching.isAccepting(_current), "MonuverseEpisode: chapter not final");
+    modifier onlyFinalChapter(address from, address to) {
+        if (from != address(0)) {
+            require(_branching.isAccepting(_current), "MonuverseEpisode: chapter not final");
+        }
         _;
     }
 
@@ -50,7 +52,7 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable, Pausable {
     }
 
     constructor(string memory initial_) {
-        _current = writeChapter(initial_, false, 0, 0, false, false);
+        _current = writeChapter(initial_, false, 0, 0, false, false, false);
         _branching.setInitial(_current);
     }
 
@@ -60,15 +62,22 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable, Pausable {
         uint256 mintAllocation,
         uint256 mintPrice,
         bool mintOpen,
-        bool revealing
+        bool revealing,
+        bool isConclusion
     ) public onlyOwner onlyInitialChapter returns (bytes32) {
+        require(
+            // Logical conversion from `isConlusion => everything disabled`
+            !isConclusion || (!whitelisting && mintAllocation == 0 && !revealing),
+            "MonuverseEpisode: everything forbidden in Final Chapter"
+        );
+
         require(
             !(revealing && mintAllocation > 0),
             "MonuverseEpisode: reveal with mint forbidden"
         );
+
         // Still possible to insert mint chapter after reveal chapter since DFAs don't
         // have state order guarantees, make mint function check for occured reveal
-
         _chapters[_hash(label)].whitelisting = whitelisting;
         _chapters[_hash(label)].minting.limit = mintAllocation;
         _chapters[_hash(label)].minting.price = mintPrice;
@@ -76,7 +85,19 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable, Pausable {
         _chapters[_hash(label)].revealing = revealing;
         _chapters[_hash(label)].exists = true;
 
-        emit ChapterWritten(label, whitelisting, mintAllocation, mintPrice, mintOpen, revealing);
+        isConclusion
+            ? _branching.addAccepting(_hash(label))
+            : _branching.removeAccepting(_hash(label));
+
+        emit ChapterWritten(
+            label,
+            whitelisting,
+            mintAllocation,
+            mintPrice,
+            mintOpen,
+            revealing,
+            isConclusion
+        );
 
         return _hash(label);
     }
@@ -198,6 +219,10 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable, Pausable {
         );
     }
 
+    function isFinal() public view returns (bool) {
+        return _branching.isAccepting(_current);
+    }
+
     function _chapterAllowsMint(uint256 quantity, uint256 minted) internal view returns (bool) {
         // This single require checks for two conditions at once:
         // (a) if minting allowed at all (current chapter allocation > 0), and
@@ -230,7 +255,7 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable, Pausable {
             ? price = _chapters[birth].minting.price
             : price = _chapters[_current].minting.price;
 
-        return quantity * price >= offer;
+        return quantity * price <= offer;
     }
 
     function _chapterMintLimit() internal view returns (uint256) {

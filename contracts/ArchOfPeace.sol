@@ -198,12 +198,12 @@ contract ArchOfPeace is
                 );
     }
 
-    // function _beforeTokenTransfers(
-    //     address from,
-    //     address to,
-    //     uint256 startTokenId,
-    //     uint256 quantity
-    // ) internal override onlyFinalChapter {
-    //     super._beforeTokenTransfers(from, to, startTokenId, quantity);
-    // }
+    function _beforeTokenTransfers(
+        address from,
+        address to,
+        uint256 startTokenId,
+        uint256 quantity
+    ) internal override onlyFinalChapter(from, to) {
+        super._beforeTokenTransfers(from, to, startTokenId, quantity);
+    }
 }

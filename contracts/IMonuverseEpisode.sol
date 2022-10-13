@@ -28,7 +28,8 @@ interface IMonuverseEpisode {
         uint256 mintAllocation,
         uint256 mintPrice,
         bool mintOpen,
-        bool revealing
+        bool revealing,
+        bool isConclusion
     );
     event ChapterRemoved(string label);
     event TransitionWritten(string from, string to, string monumentalEvent);
@@ -48,7 +49,8 @@ interface IMonuverseEpisode {
         uint256 mintAllocation,
         uint256 mintPrice,
         bool mintOpen,
-        bool revealing
+        bool revealing,
+        bool isConlusion
     ) external returns (bytes32);
 
     function removeChapter(string calldata label) external;

@@ -21,6 +21,7 @@ export type Chapter = {
     minting: Minting;
     whitelisting: boolean;
     revealing: boolean;
+    isConclusion: boolean;
 };
 
 export type Transition = {
@@ -51,7 +52,8 @@ export const writeEpisode = async (
                     'ether'
                 ),
                 episode[i].minting.isOpen,
-                episode[i].revealing
+                episode[i].revealing,
+                episode[i].isConclusion
             )
         )
             .to.emit(episodeContract, 'ChapterWritten')
@@ -64,7 +66,8 @@ export const writeEpisode = async (
                     'ether'
                 ),
                 episode[i].minting.isOpen,
-                episode[i].revealing
+                episode[i].revealing,
+                episode[i].isConclusion
             );
     }
 
