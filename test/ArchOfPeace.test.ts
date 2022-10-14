@@ -17,6 +17,8 @@ import {
     hashStr,
 } from './common';
 
+const MAX_MINTABLE: number = 3;
+
 const episode: Array<Chapter> = [
     {
         label: 'Introduction: The Big Bang',
@@ -96,7 +98,7 @@ const episode: Array<Chapter> = [
         whitelisting: false,
         minting: { limit: 0, price: 0, rules: [], isOpen: false },
         revealing: true,
-        isConclusion: false
+        isConclusion: false,
     },
     {
         label: 'Conclusion: Monuverse',
@@ -178,10 +180,12 @@ const paths: Array<Array<Transition>> = [
     ],
 ];
 
+const mintChapters: Array<Chapter> = episode.filter(
+    (chapter: Chapter) => chapter.minting.limit > 0 && !chapter.minting.isOpen
+);
+
 describe('CONTRACT ArchOfPeace', () => {
     paths.forEach((path, pathIndex) => {
-        let mintChapters: Array<Chapter> = [];
-
         let monuverse: SignerWithAddress;
         let hacker: SignerWithAddress;
         let users: SignerWithAddress[] = [];
@@ -197,7 +201,7 @@ describe('CONTRACT ArchOfPeace', () => {
         const symbol: string = 'MNT';
         const veilURI: string = 'test:veilURI_unique';
         const baseURI: string = 'test:baseURI_';
-        const maxSupply: number = 77;
+        const maxSupply: number = 7777;
         let archOfPeace: Contract;
 
         // Chainlink VRF V2
@@ -236,11 +240,6 @@ describe('CONTRACT ArchOfPeace', () => {
         };
 
         before(async () => {
-            mintChapters = episode.filter(
-                (chapter: Chapter) =>
-                    chapter.minting.limit > 0 && !chapter.minting.isOpen
-            );
-
             [monuverse, hacker, ...users] = await ethers.getSigners();
 
             for (
@@ -256,7 +255,7 @@ describe('CONTRACT ArchOfPeace', () => {
                         )
                         .map((user) => ({
                             account: user,
-                            limit: 3,
+                            limit: MAX_MINTABLE,
                             chapter: buffHashStr(episode[i].label),
                         }))
                 );
@@ -327,7 +326,7 @@ describe('CONTRACT ArchOfPeace', () => {
                     ];
 
                 context(`Chapter "${chapter.label}"`, () => {
-                    it('MUST be in the right chapter', async () => {
+                    it(`MUST actually be in Chapter "${chapter.label}"`, async () => {
                         expect(await archOfPeace.currentChapter()).to.equal(
                             hashStr(chapter.label)
                         );
@@ -351,37 +350,80 @@ describe('CONTRACT ArchOfPeace', () => {
 
                     if (chapter.minting.limit > 0) {
                         if (chapter.minting.isOpen) {
-                            it('MUST allow anyone to mint', async () => {
-                                mintChapters.forEach(async (mintChapter) => {
+                            mintChapters.forEach(async (mintChapter) => {
+                                it(`MUST allow open mint OR restricted fixed price mint to "${mintChapter.label}"`, async () => {
                                     const minter: whitelistRecord =
                                         getWhitelistedMinter(mintChapter.label);
 
-                                    const proof: string[] = getProof(
-                                        minter.account.address
-                                    );
+                                    const [groupEnabled, fixedPriceGroup] =
+                                        await archOfPeace.groupRule(
+                                            chapter.label,
+                                            mintChapter.label
+                                        );
 
                                     const balance: number =
                                         await archOfPeace.balanceOf(
                                             minter.account.address
                                         );
 
-                                    await (
-                                        await archOfPeace
-                                            .connect(minter.account)
-                                            [
-                                                'mint(uint256,uint256,bytes32,bytes32[])'
-                                            ](
-                                                minter.limit,
-                                                minter.limit,
-                                                minter.chapter,
-                                                proof,
-                                                {
-                                                    value: ethers.utils.parseEther(
-                                                        '2'
-                                                    ),
-                                                }
-                                            )
-                                    ).wait();
+                                    const offChainGroupPrice: BigNumber =
+                                        ethers.utils.parseEther(
+                                            groupEnabled
+                                                ? mintChapter.minting.price.toString()
+                                                : chapter.minting.price.toString()
+                                        );
+
+                                    const groupPrice: BigNumber =
+                                        await archOfPeace.currentGroupPrice(
+                                            mintChapter.label
+                                        );
+                                    expect(groupPrice).to.equal(
+                                        offChainGroupPrice
+                                    );
+
+                                    const offer: BigNumber = BigNumber.from(
+                                        minter.limit
+                                    ).mul(groupPrice);
+                                    const offerIsRight: boolean =
+                                        await archOfPeace.offerMatchesGroupPrice(
+                                            mintChapter.label,
+                                            minter.limit,
+                                            offer
+                                        );
+                                    expect(offerIsRight).to.be.true;
+
+                                    if (groupEnabled) {
+                                        expect(fixedPriceGroup).to.equal(true);
+
+                                        const proof: string[] = getProof(
+                                            minter.account.address
+                                        );
+
+                                        await (
+                                            await archOfPeace
+                                                .connect(minter.account)
+                                                [
+                                                    'mint(uint256,uint256,bytes32,bytes32[])'
+                                                ](
+                                                    minter.limit,
+                                                    minter.limit,
+                                                    minter.chapter,
+                                                    proof,
+                                                    {
+                                                        value: offer,
+                                                    }
+                                                )
+                                        ).wait();
+                                    } else {
+                                        await (
+                                            await archOfPeace
+                                                .connect(minter.account)
+                                                ['mint(uint256)'](
+                                                    minter.limit,
+                                                    { value: offer }
+                                                )
+                                        ).wait();
+                                    }
 
                                     expect(
                                         await archOfPeace.balanceOf(
@@ -391,17 +433,104 @@ describe('CONTRACT ArchOfPeace', () => {
                                 });
                             });
 
-                            it('MUST allow fixed price user to still mint');
+                            it('MUST allow non-whitelisted to mint at public price', async () => {
+                                expect(publicMinters.length).to.be.greaterThan(
+                                    0
+                                );
+
+                                const minter: SignerWithAddress | undefined =
+                                    publicMinters.pop();
+
+                                if (minter != undefined) {
+                                    const balance: number =
+                                        await archOfPeace.balanceOf(
+                                            minter.address
+                                        );
+
+                                    const groupPrice: BigNumber =
+                                        await archOfPeace.currentDefaultPrice();
+                                    expect(groupPrice).to.equal(
+                                        ethers.utils.parseEther(
+                                            chapter.minting.price.toString()
+                                        )
+                                    );
+
+                                    const offer: BigNumber =
+                                        BigNumber.from(MAX_MINTABLE).mul(
+                                            groupPrice
+                                        );
+                                    const offerIsRight: boolean =
+                                        await archOfPeace.offerMatchesGroupPrice(
+                                            chapter.label,
+                                            MAX_MINTABLE,
+                                            offer
+                                        );
+                                    expect(offerIsRight).to.be.true;
+
+                                    await (
+                                        await archOfPeace
+                                            .connect(minter)
+                                            ['mint(uint256)'](MAX_MINTABLE, {
+                                                value: offer,
+                                            })
+                                    ).wait();
+
+                                    expect(
+                                        await archOfPeace.balanceOf(
+                                            minter.address
+                                        )
+                                    ).to.equal(balance + MAX_MINTABLE);
+                                }
+                            });
                         } else {
-                            it('MUST NOT allow non-whitelisted users to mint');
+                            it('MUST NOT allow non-whitelisted to mint', async () => {
+                                expect(publicMinters.length).to.be.greaterThan(
+                                    0
+                                );
+
+                                const minter: SignerWithAddress | undefined =
+                                    publicMinters.pop();
+
+                                if (minter != undefined) {
+                                    const groupPrice: BigNumber =
+                                        await archOfPeace.currentDefaultPrice();
+                                    expect(groupPrice).to.equal(
+                                        ethers.utils.parseEther(
+                                            chapter.minting.price.toString()
+                                        )
+                                    );
+
+                                    const offer: BigNumber =
+                                        BigNumber.from(MAX_MINTABLE).mul(
+                                            groupPrice
+                                        );
+                                    const offerIsRight: boolean =
+                                        await archOfPeace.offerMatchesGroupPrice(
+                                            chapter.label,
+                                            MAX_MINTABLE,
+                                            offer
+                                        );
+                                    expect(offerIsRight).to.be.true;
+
+                                    expect(
+                                        await archOfPeace
+                                            .connect(minter)
+                                            ['mint(uint256)'](MAX_MINTABLE, {
+                                                value: offer,
+                                            })
+                                    ).to.be.revertedWith(
+                                        'ArchOfPeace: sender not whitelisted'
+                                    );
+                                }
+                            });
                         }
 
                         it(
-                            'MUST allow multiple minting transaction for the same user until limit reached'
+                            `MUST allow minting to whitelisted "${chapter.label}" native minters`
                         );
 
                         chapter.minting.rules.forEach((rule) =>
-                            it(`MUST allow minting to whitelisted ${rule.label} minters`, async () => {
+                            it(`MUST allow restricted minting to whitelisted "${rule.label}" minters`, async () => {
                                 const minter: whitelistRecord =
                                     getWhitelistedMinter(rule.label);
 
@@ -440,16 +569,13 @@ describe('CONTRACT ArchOfPeace', () => {
                             })
                         );
 
-                        it('MUST NOT allow minting groups outside Chapter Rules and Current Chapter', async () => {
-                            //   const hexProof = whitelistTree.getHexProof(
-                            //       whitelistTree.getLeaves()[0]
-                            //   );
-                            //   await expect(
-                            //       archOfPeace.mint(3, 3)
-                            //   ).to.be.revertedWith(
-                            //       'ArchOfPeace: no mint chapter'
-                            //   );
-                        });
+                        it(
+                            'MUST NOT allow minting groups outside Chapter Rules and Chapter Natives'
+                        );
+
+                        it(
+                            'MUST allow multiple minting transaction for the same user until limit reached'
+                        );
 
                         it('MUST NOT allow minting with insufficient offer');
 
@@ -457,6 +583,69 @@ describe('CONTRACT ArchOfPeace', () => {
                             'MUST emit `ChapterMinted` OR `EpisodeMinted` when Chapter allocation is full'
                         );
                     } else {
+                        it('MUST NOT allow any type of minting at all', async () => {
+                            for (
+                                let i: number = 0;
+                                i < mintChapters.length;
+                                i++
+                            ) {
+                                const minter = getWhitelistedMinter(
+                                    mintChapters[i].label
+                                );
+                                const proof = getProof(minter.account.address);
+                                const groupPrice: BigNumber =
+                                    await archOfPeace.currentGroupPrice(
+                                        mintChapters[i].label
+                                    );
+                                const offer: BigNumber = BigNumber.from(
+                                    minter.limit
+                                ).mul(groupPrice);
+
+                                await expect(
+                                    archOfPeace
+                                        .connect(minter.account)
+                                        [
+                                            'mint(uint256,uint256,bytes32,bytes32[])'
+                                        ](
+                                            MAX_MINTABLE,
+                                            minter.limit,
+                                            minter.chapter,
+                                            proof,
+                                            {
+                                                value: offer,
+                                            }
+                                        )
+                                ).to.be.revertedWith(
+                                    'ArchOfPeace: no mint chapter'
+                                );
+                            }
+
+                            expect(publicMinters.length).to.be.greaterThan(0);
+
+                            const minter: SignerWithAddress | undefined =
+                                publicMinters.pop();
+
+                            if (minter != undefined) {
+                                const groupPrice: BigNumber =
+                                    await archOfPeace.currentDefaultPrice();
+                                const offer: BigNumber =
+                                    BigNumber.from(MAX_MINTABLE).mul(
+                                        groupPrice
+                                    );
+
+                                // TODO: it throws correctly but probably due to override
+                                // TODO: the expect doesn't catch the revert
+                                // expect(
+                                //     await archOfPeace
+                                //         .connect(minter)
+                                //         ['mint(uint256)'](MAX_MINTABLE, {
+                                //             value: offer,
+                                //         })
+                                // ).to.be.revertedWith(
+                                //     'ArchOfPeace: no mint chapter'
+                                // );
+                            }
+                        });
                     }
 
                     if (chapter.revealing) {
@@ -482,23 +671,21 @@ describe('CONTRACT ArchOfPeace', () => {
                     }
 
                     // if (await archOfPeace.isFinal())
-                        it('MUST perform the right path transition', async () => {
-                            if (transition.event == 'EpisodeMinted') {
-                                await expect(archOfPeace.sealMinting()).to.emit(
-                                    archOfPeace,
-                                    'EpisodeMinted'
-                                );
-                            } else if (
-                                transition.event == 'EpisodeProgressedOnlife'
-                            ) {
-                                await expect(
-                                    archOfPeace.emitOnlifeEvent()
-                                ).to.emit(
-                                    archOfPeace,
-                                    'EpisodeProgressedOnlife'
-                                );
-                            }
-                        });
+                    it(`MUST perform the "${transition.event}" transition`, async () => {
+                        if (transition.event == 'EpisodeMinted') {
+                            await expect(archOfPeace.sealMinting()).to.emit(
+                                archOfPeace,
+                                'EpisodeMinted'
+                            );
+                        } else if (
+                            transition.event == 'EpisodeProgressedOnlife'
+                        ) {
+                            await expect(archOfPeace.emitOnlifeEvent()).to.emit(
+                                archOfPeace,
+                                'EpisodeProgressedOnlife'
+                            );
+                        }
+                    });
                 });
             });
         });

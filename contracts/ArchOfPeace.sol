@@ -204,6 +204,7 @@ contract ArchOfPeace is
         uint256 startTokenId,
         uint256 quantity
     ) internal override onlyFinalChapter(from, to) {
+        // TODO: move address(0) check away from modifier
         super._beforeTokenTransfers(from, to, startTokenId, quantity);
     }
 }

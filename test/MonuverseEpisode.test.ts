@@ -686,7 +686,7 @@ describe('CONTRACT MonuverseEpisode', async () => {
                             .to.emit(monuverseEpisode, 'MintGroupRemoved')
                             .withArgs(episode[e].label, rules[r].label);
 
-                        let removedGroup = await monuverseEpisode.mintGroup(
+                        let removedGroup = await monuverseEpisode.groupRule(
                             episode[e].label,
                             rules[r].label
                         );

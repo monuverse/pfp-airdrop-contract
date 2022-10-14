@@ -208,7 +208,7 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable, Pausable {
         return _current;
     }
 
-    function mintGroup(string calldata label, string calldata group)
+    function groupRule(string calldata label, string calldata group)
         public
         view
         returns (bool, bool)
@@ -219,8 +219,42 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable, Pausable {
         );
     }
 
+    function currentDefaultPrice() public view returns (uint256) {
+        return _currentGroupPrice(_current);
+    }
+
+    function currentGroupPrice(string calldata group) public view returns (uint256) {
+        return _currentGroupPrice(_hash(group));
+    }
+
+    function offerMatchesGroupPrice(
+        string calldata group,
+        uint256 quantity,
+        uint256 offer
+    ) public view returns (bool) {
+        return _offerMatchesGroupPrice(_hash(group), quantity, offer);
+    }
+
     function isFinal() public view returns (bool) {
         return _branching.isAccepting(_current);
+    }
+
+    function _currentGroupPrice(bytes32 group) internal view returns (uint256) {
+        uint256 price;
+
+        _chapters[_current].minting.rules[group].fixedPrice
+            ? price = _chapters[group].minting.price
+            : price = _chapters[_current].minting.price;
+
+        return price;
+    }
+
+    function _offerMatchesGroupPrice(
+        bytes32 group,
+        uint256 quantity,
+        uint256 offer
+    ) internal view returns (bool) {
+        return quantity * _currentGroupPrice(group) <= offer;
     }
 
     function _chapterAllowsMint(uint256 quantity, uint256 minted) internal view returns (bool) {
@@ -248,14 +282,9 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable, Pausable {
     function _chapterMatchesOffer(
         uint256 quantity,
         uint256 offer,
-        bytes32 birth
+        bytes32 group
     ) internal view returns (bool) {
-        uint256 price;
-        _chapters[_current].minting.rules[birth].fixedPrice
-            ? price = _chapters[birth].minting.price
-            : price = _chapters[_current].minting.price;
-
-        return quantity * price <= offer;
+        return quantity * _currentGroupPrice(group) <= offer;
     }
 
     function _chapterMintLimit() internal view returns (uint256) {
