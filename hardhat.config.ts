@@ -36,7 +36,7 @@ const config: HardhatUserConfig = {
                 mnemonic:
                     'monu verse arch peace light big bang builders chosen reveal scalable random',
                 initialIndex: 0,
-                count: 101,
+                count: 1001,
                 path: "m/44'/60'/0'/0",
                 accountsBalance: '10000000000000000000000',
                 passphrase: '',

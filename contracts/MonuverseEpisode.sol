@@ -81,7 +81,7 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable, Pausable {
         _chapters[_hash(label)].whitelisting = whitelisting;
         _chapters[_hash(label)].minting.limit = mintAllocation;
         _chapters[_hash(label)].minting.price = mintPrice;
-        _chapters[_hash(label)].minting.isOpen = true;
+        _chapters[_hash(label)].minting.isOpen = mintOpen;
         _chapters[_hash(label)].revealing = revealing;
         _chapters[_hash(label)].exists = true;
 
@@ -239,12 +239,14 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable, Pausable {
         return _branching.isAccepting(_current);
     }
 
+    // returns current chapter price even for future forbidden chapters,
+    // but it doesn't matter since `enabled` actually responds for allowing or not
     function _currentGroupPrice(bytes32 group) internal view returns (uint256) {
         uint256 price;
 
         _chapters[_current].minting.rules[group].fixedPrice
-            ? price = _chapters[group].minting.price
-            : price = _chapters[_current].minting.price;
+                    ? price = _chapters[group].minting.price
+                    : price = _chapters[_current].minting.price;
 
         return price;
     }
