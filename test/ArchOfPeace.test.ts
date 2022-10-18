@@ -10,13 +10,29 @@ import { keccak256 } from 'ethers/lib/utils';
 import {
     Chapter,
     Transition,
-    whitelistRecord,
+    WhitelistRecord,
     toWhitelistLeaf,
     writeEpisode,
     buffHashStr,
     hashStr,
     MintGroupRules,
 } from './common';
+
+type MintStatus = {
+    balance: number;
+    price: BigNumber;
+};
+
+type PublicMinter = {
+    account: SignerWithAddress;
+    status: MintStatus;
+};
+
+type WhitelistedMinter = {
+    record: WhitelistRecord;
+    proof: string[];
+    status: MintStatus;
+};
 
 const MAX_MINTABLE: number = 3;
 
@@ -39,7 +55,7 @@ const episode: Array<Chapter> = [
         label: 'Chapter II: The Chosen Ones',
         whitelisting: false,
         minting: {
-            limit: 3777,
+            limit: 7777,
             price: 0.09,
             rules: [
                 {
@@ -58,7 +74,7 @@ const episode: Array<Chapter> = [
         whitelisting: false,
         minting: {
             limit: 7777,
-            price: 0.11,
+            price: 0.09,
             rules: [
                 {
                     label: 'Chapter I: The Arch Builders',
@@ -81,7 +97,7 @@ const episode: Array<Chapter> = [
         whitelisting: false,
         minting: {
             limit: 7777,
-            price: 0.12,
+            price: 0.11,
             rules: [
                 {
                     label: 'Chapter I: The Arch Builders',
@@ -190,10 +206,10 @@ describe('CONTRACT ArchOfPeace', () => {
         let monuverse: SignerWithAddress;
         let hacker: SignerWithAddress;
         let users: SignerWithAddress[] = [];
-        let whitelist: whitelistRecord[] = []; // subset of users
+        let whitelist: WhitelistRecord[] = []; // subset of users
         let publicMinters: SignerWithAddress[] = []; // equals users - whitelist
 
-        let remainingWhitelist: whitelistRecord[] = []; // modifiable during tests
+        let remainingWhitelist: WhitelistRecord[] = []; // modifiable during tests
         let whitelistTree: MerkleTree;
         let whitelistRoot: Buffer;
 
@@ -213,8 +229,8 @@ describe('CONTRACT ArchOfPeace', () => {
         );
         let vrfCoordinatorV2Mock: Contract;
 
-        const getWhitelistedMinter = (label: string): whitelistRecord => {
-            const isRightMinter = (record: whitelistRecord) =>
+        const getWhitelistedMinter = (label: string): WhitelistRecord => {
+            const isRightMinter = (record: WhitelistRecord) =>
                 record.chapter.equals(buffHashStr(label));
 
             const minterIndex: number = remainingWhitelist.findIndex((record) =>
@@ -231,12 +247,14 @@ describe('CONTRACT ArchOfPeace', () => {
         };
 
         const getProof = (address: string): string[] => {
-            const isRightLeaf = (record: whitelistRecord) =>
+            const isRightLeaf = (record: WhitelistRecord) =>
                 record.account.address == address;
 
             const leafIndex: number = whitelist.findIndex((record) =>
                 isRightLeaf(record)
             );
+
+            expect(leafIndex).to.be.greaterThan(-1);
 
             return whitelistTree.getHexProof(
                 whitelistTree.getLeaves()[leafIndex]
@@ -244,7 +262,7 @@ describe('CONTRACT ArchOfPeace', () => {
         };
 
         const mint = async (label: string) => {
-            const minter: whitelistRecord = getWhitelistedMinter(label);
+            const minter: WhitelistRecord = getWhitelistedMinter(label);
         };
 
         before(async () => {
@@ -334,6 +352,92 @@ describe('CONTRACT ArchOfPeace', () => {
                     ];
 
                 context(`Chapter "${chapter.label}"`, () => {
+                    let wlNativeMinter: WhitelistedMinter;
+                    let wlRegulatedMinters: WhitelistedMinter[] = [];
+                    let wlDisabledMinters: WhitelistedMinter[] = [];
+                    let publicMinter: PublicMinter;
+
+                    beforeEach(async () => {
+                        mintChapters.forEach(async (mintChapter) => {
+                            const wlMinter: WhitelistRecord =
+                                getWhitelistedMinter(mintChapter.label);
+
+                            const proof: string[] = getProof(
+                                wlMinter.account.address
+                            );
+
+                            const balance: number = await archOfPeace.balanceOf(
+                                wlMinter.account.address
+                            );
+
+                            const price: BigNumber =
+                                await archOfPeace.currentGroupPrice(
+                                    mintChapter.label
+                                );
+
+                            const isNativeMinter: boolean =
+                                mintChapter.label == chapter.label;
+
+                            const rule: MintGroupRules | undefined =
+                                chapter.minting.rules.find(
+                                    (rule) => rule.label == mintChapter.label
+                                );
+
+                            if (isNativeMinter) {
+                                wlNativeMinter = {
+                                    record: wlMinter,
+                                    proof: proof,
+                                    status: {
+                                        balance: balance,
+                                        price: price,
+                                    },
+                                };
+                            } else if (!isNativeMinter && rule != undefined) {
+                                wlRegulatedMinters.push({
+                                    record: wlMinter,
+                                    proof: proof,
+                                    status: {
+                                        balance: balance,
+                                        price: price,
+                                    },
+                                });
+                            } else if (!isNativeMinter && rule == undefined) {
+                                wlDisabledMinters.push({
+                                    record: wlMinter,
+                                    proof: proof,
+                                    status: {
+                                        balance: balance,
+                                        price: price,
+                                    },
+                                });
+                            }
+                        });
+
+                        const publicMinterAccount:
+                            | SignerWithAddress
+                            | undefined = publicMinters.pop();
+
+                        expect(publicMinterAccount).to.not.be.undefined;
+
+                        if (publicMinterAccount != undefined) {
+                            const publicMinterBalance: number =
+                                await archOfPeace.balanceOf(
+                                    publicMinterAccount.address
+                                );
+
+                            const publicPrice: BigNumber =
+                                await archOfPeace.currentDefaultPrice();
+
+                            publicMinter = {
+                                account: publicMinterAccount,
+                                status: {
+                                    balance: publicMinterBalance,
+                                    price: publicPrice,
+                                },
+                            };
+                        }
+                    });
+
                     it(`MUST actually be in Chapter "${chapter.label}"`, async () => {
                         expect(await archOfPeace.currentChapter()).to.equal(
                             hashStr(chapter.label)
@@ -427,11 +531,6 @@ describe('CONTRACT ArchOfPeace', () => {
                                 i < mintChapters.length;
                                 i++
                             ) {
-                                console.log(
-                                    '===============\n',
-                                    'mintChapter',
-                                    mintChapters[i].label
-                                );
                                 // equal to chapter.label && in rules && price > 0
                                 const rule: MintGroupRules | undefined =
                                     chapter.minting.rules.find(
@@ -439,17 +538,10 @@ describe('CONTRACT ArchOfPeace', () => {
                                             rule.label == mintChapters[i].label
                                     );
 
-                                console.log('rule', rule);
-
                                 const groupPrice: BigNumber =
                                     await archOfPeace.currentGroupPrice(
                                         mintChapters[i].label
                                     );
-
-                                console.log(
-                                    'groupPrice on Smartcontract',
-                                    groupPrice
-                                );
 
                                 if (
                                     (rule != undefined ||
@@ -467,8 +559,6 @@ describe('CONTRACT ArchOfPeace', () => {
                                     let offer: BigNumber = BigNumber.from(
                                         minter.limit
                                     ).mul(groupPrice);
-
-                                    console.log(groupPrice);
 
                                     await expect(
                                         archOfPeace
@@ -519,10 +609,25 @@ describe('CONTRACT ArchOfPeace', () => {
                             }
                         });
 
+                        it('MUST allow multiple minting transactions for the same user until personal limit reached', async () => {
+                            if (chapter.minting.isOpen) {
+                                const minter: WhitelistRecord =
+                                    getWhitelistedMinter(chapter.label);
+
+                                expect(minter.limit).to.be.greaterThan(0);
+
+                                const proof: string[] = getProof(
+                                    minter.account.address
+                                );
+
+                                // const balance =
+                            }
+                        });
+
                         if (chapter.minting.isOpen) {
                             mintChapters.forEach(async (mintChapter) => {
                                 it(`MUST allow open mint OR restricted fixed price mint to "${mintChapter.label}"`, async () => {
-                                    const minter: whitelistRecord =
+                                    const minter: WhitelistRecord =
                                         getWhitelistedMinter(mintChapter.label);
 
                                     const [groupEnabled, fixedPriceGroup] =
@@ -654,7 +759,7 @@ describe('CONTRACT ArchOfPeace', () => {
                             });
                         } else {
                             it(`MUST allow minting to whitelisted "${chapter.label}" native minters`, async () => {
-                                const minter: whitelistRecord =
+                                const minter: WhitelistRecord =
                                     getWhitelistedMinter(chapter.label);
 
                                 const proof: string[] = getProof(
@@ -761,7 +866,7 @@ describe('CONTRACT ArchOfPeace', () => {
                                         mintChapters[i].label != chapter.label;
 
                                     if (rule == undefined && alienMinter) {
-                                        const minter: whitelistRecord =
+                                        const minter: WhitelistRecord =
                                             getWhitelistedMinter(
                                                 mintChapters[i].label
                                             );
@@ -808,7 +913,7 @@ describe('CONTRACT ArchOfPeace', () => {
 
                         chapter.minting.rules.forEach((rule) =>
                             it(`MUST allow restricted minting to whitelisted "${rule.label}" minters`, async () => {
-                                const minter: whitelistRecord =
+                                const minter: WhitelistRecord =
                                     getWhitelistedMinter(rule.label);
 
                                 const hexProof = getProof(
@@ -847,10 +952,6 @@ describe('CONTRACT ArchOfPeace', () => {
                         );
 
                         it(
-                            'MUST allow multiple minting transaction for the same user until limit reached'
-                        );
-
-                        it(
                             'MUST emit `ChapterMinted` OR `EpisodeMinted` when Chapter allocation is full'
                         );
                     } else {
@@ -860,7 +961,7 @@ describe('CONTRACT ArchOfPeace', () => {
                                 i < mintChapters.length;
                                 i++
                             ) {
-                                const minter: whitelistRecord =
+                                const minter: WhitelistRecord =
                                     getWhitelistedMinter(mintChapters[i].label);
 
                                 const proof = getProof(minter.account.address);

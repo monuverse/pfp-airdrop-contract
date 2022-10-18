@@ -30,7 +30,7 @@ export type Transition = {
     to: string;
 };
 
-export type whitelistRecord = {
+export type WhitelistRecord = {
     account: SignerWithAddress;
     limit: number;
     chapter: Buffer;
