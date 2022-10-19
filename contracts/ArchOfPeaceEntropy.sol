@@ -53,6 +53,7 @@ contract ArchOfPeaceEntropy is VRFConsumerBaseV2, Ownable {
         uint256[] memory randomWords
     ) internal virtual override {
         _entropy = randomWords[0];
+
         _fulfilling = false;
     }
 

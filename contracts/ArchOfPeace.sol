@@ -151,7 +151,7 @@ contract ArchOfPeace is
     }
 
     function sealMinting() external onlyMintChapter onlyOwner returns (uint256) {
-        // require(_minted > 0, "ArchOfPeace: no token minted");
+        require(_minted > 0, "ArchOfPeace: no token minted");
 
         _maxSupply = _minted;
         _emitMonumentalEvent(EpisodeMinted.selector);
@@ -172,7 +172,6 @@ contract ArchOfPeace is
     }
 
     // TODO: pause/unpause
-
     /**
      * @notice Obtains mapped URI for an existing token.
      * @param tokenId existing token ID.

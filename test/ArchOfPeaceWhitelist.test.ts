@@ -17,14 +17,14 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { MerkleTree } from 'merkletreejs';
 import { keccak256 } from 'ethers/lib/utils';
 
-import { whitelistRecord, toWhitelistLeaf, buffHashStr } from './common';
+import { WhitelistRecord, toWhitelistLeaf, buffHashStr } from './common';
 
 describe('CONTRACT ArchOfPeaceWhitelist', () => {
     let owner: SignerWithAddress;
     let hacker: SignerWithAddress; // always out of the whitelist
     let users: SignerWithAddress[]; // may enter/exit whitelist
 
-    let whitelist: whitelistRecord[];
+    let whitelist: WhitelistRecord[];
     let whitelistTree: MerkleTree;
 
     let archOfPeaceWl: Contract;
