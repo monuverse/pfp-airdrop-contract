@@ -1,7 +1,12 @@
-# Arch Of Peace Collection
+# Arch Of Peace Episode
 
-![](./episode.png)
+## Episode Lifecycle
 
+<p align="center">
+    ![](./episode.png)
+</p>
+
+## Other
 ```shell
 npx hardhat help
 npx hardhat test
