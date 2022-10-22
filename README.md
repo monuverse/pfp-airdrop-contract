@@ -1,10 +1,10 @@
 # Arch Of Peace Episode
 
-## Episode Lifecycle
+## Episode
 
-    ![](./episode.png)
+![](./episode.png)
 
-## Other
+
 
 ```shell
 npx hardhat help
