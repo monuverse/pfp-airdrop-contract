@@ -34,6 +34,8 @@ type WhitelistedMinter = {
     status: MintStatus;
 };
 
+const MAX_SUPPLY: number = 111;
+
 const MAX_MINTABLE: number = 3;
 
 const episode: Array<Chapter> = [
@@ -47,7 +49,7 @@ const episode: Array<Chapter> = [
     {
         label: 'Chapter I: The Arch Builders',
         whitelisting: true,
-        minting: { limit: 777, price: 0, rules: [], isOpen: false },
+        minting: { limit: 11, price: 0, rules: [], isOpen: false },
         revealing: false,
         isConclusion: false,
     },
@@ -55,7 +57,7 @@ const episode: Array<Chapter> = [
         label: 'Chapter II: The Chosen Ones',
         whitelisting: false,
         minting: {
-            limit: 7777,
+            limit: MAX_SUPPLY,
             price: 0.09,
             rules: [
                 {
@@ -73,7 +75,7 @@ const episode: Array<Chapter> = [
         label: 'Chapter III: The Believers',
         whitelisting: false,
         minting: {
-            limit: 7777,
+            limit: MAX_SUPPLY,
             price: 0.09,
             rules: [
                 {
@@ -96,7 +98,7 @@ const episode: Array<Chapter> = [
         label: 'Chapter IV: The Brave',
         whitelisting: false,
         minting: {
-            limit: 7777,
+            limit: MAX_SUPPLY,
             price: 0.11,
             rules: [
                 {
@@ -170,7 +172,7 @@ const branching: Array<Transition> = [
     },
     {
         from: 'Chapter IV: The Brave',
-        event: 'EpisodeProgressedOnlife',
+        event: 'MintingSealed',
         to: 'Chapter V: A Monumental Reveal',
     },
     {
@@ -227,7 +229,7 @@ describe('CONTRACT ArchOfPeace', () => {
         const symbol: string = 'MNT';
         const veilURI: string = 'test:veilURI_unique';
         const baseURI: string = 'test:baseURI_';
-        const maxSupply: number = 7777;
+        const maxSupply: number = MAX_SUPPLY;
         let archOfPeace: Contract;
 
         // Chainlink VRF V2
@@ -268,10 +270,6 @@ describe('CONTRACT ArchOfPeace', () => {
             return whitelistTree.getHexProof(
                 whitelistTree.getLeaves()[leafIndex]
             );
-        };
-
-        const mint = async (label: string) => {
-            const minter: WhitelistRecord = getWhitelistedMinter(label);
         };
 
         before(async () => {
@@ -367,102 +365,110 @@ describe('CONTRACT ArchOfPeace', () => {
                     let wlDisabledMinters: WhitelistedMinter[] = [];
                     let publicMinter: PublicMinter;
 
-                    beforeEach(async () => {
-                        if (chapter.minting.limit > 0) {
-                            mintChapters.forEach(async (mintChapter) => {
-                                const wlMinter: WhitelistRecord =
-                                    getWhitelistedMinter(mintChapter.label);
+                    const getMinterSamples = async () => {
+                        for (let i: number = 0; i < mintChapters.length; i++) {
+                            const mintChapter = mintChapters[i];
 
-                                const proof: string[] = getProof(
-                                    wlMinter.account.address
+                            const wlMinter: WhitelistRecord =
+                                getWhitelistedMinter(mintChapter.label);
+
+                            expect(wlMinter).to.not.be.undefined;
+
+                            const proof: string[] = getProof(
+                                wlMinter.account.address
+                            );
+
+                            const balance: number = await archOfPeace.balanceOf(
+                                wlMinter.account.address
+                            );
+
+                            const price: BigNumber =
+                                await archOfPeace.currentGroupPrice(
+                                    mintChapter.label
                                 );
 
-                                const balance: number =
-                                    await archOfPeace.balanceOf(
-                                        wlMinter.account.address
-                                    );
+                            const isNativeMinter: boolean =
+                                mintChapter.label == chapter.label;
 
-                                const price: BigNumber =
-                                    await archOfPeace.currentGroupPrice(
-                                        mintChapter.label
-                                    );
+                            const rule: MintGroupRules | undefined =
+                                chapter.minting.rules.find(
+                                    (rule) => rule.label == mintChapter.label
+                                );
 
-                                const isNativeMinter: boolean =
-                                    mintChapter.label == chapter.label;
-
-                                const rule: MintGroupRules | undefined =
-                                    chapter.minting.rules.find(
-                                        (rule) =>
-                                            rule.label == mintChapter.label
-                                    );
-
-                                if (isNativeMinter) {
-                                    wlNativeMinter = {
-                                        record: wlMinter,
-                                        proof: proof,
-                                        status: {
-                                            balance: balance,
-                                            price: price,
-                                        },
-                                    };
-                                } else if (
-                                    !isNativeMinter &&
-                                    rule != undefined
-                                ) {
-                                    wlRegulatedMinters.push({
-                                        record: wlMinter,
-                                        proof: proof,
-                                        status: {
-                                            balance: balance,
-                                            price: price,
-                                        },
-                                    });
-                                } else if (
-                                    !isNativeMinter &&
-                                    rule == undefined
-                                ) {
-                                    wlDisabledMinters.push({
-                                        record: wlMinter,
-                                        proof: proof,
-                                        status: {
-                                            balance: balance,
-                                            price: price,
-                                        },
-                                    });
-                                }
-                            });
-
-                            wlEnabledMinters = wlRegulatedMinters.concat([
-                                wlNativeMinter,
-                            ]);
-
-                            const publicMinterAccount:
-                                | SignerWithAddress
-                                | undefined = publicMinters.pop();
-
-                            expect(publicMinterAccount).to.not.be.undefined;
-
-                            if (publicMinterAccount != undefined) {
-                                const publicMinterBalance: number =
-                                    await archOfPeace.balanceOf(
-                                        publicMinterAccount.address
-                                    );
-
-                                const publicPrice: BigNumber =
-                                    await archOfPeace.currentDefaultPrice();
-
-                                publicMinter = {
-                                    account: publicMinterAccount,
+                            if (isNativeMinter) {
+                                wlNativeMinter = {
+                                    record: wlMinter,
+                                    proof: proof,
                                     status: {
-                                        balance: publicMinterBalance,
-                                        price: publicPrice,
+                                        balance: balance,
+                                        price: price,
                                     },
                                 };
+                            } else if (!isNativeMinter && rule != undefined) {
+                                wlRegulatedMinters = [];
+                                wlRegulatedMinters.push({
+                                    record: wlMinter,
+                                    proof: proof,
+                                    status: {
+                                        balance: balance,
+                                        price: price,
+                                    },
+                                });
+                            } else if (!isNativeMinter && rule == undefined) {
+                                wlDisabledMinters = [];
+                                wlDisabledMinters.push({
+                                    record: wlMinter,
+                                    proof: proof,
+                                    status: {
+                                        balance: balance,
+                                        price: price,
+                                    },
+                                });
                             }
 
-                            // console.log(wlNativeMinter);
-                            // console.log(wlRegulatedMinters.length);
-                            // console.log(wlDisabledMinters.length);
+                            expect(
+                                await archOfPeace.balanceOf(
+                                    wlMinter.account.address
+                                )
+                            ).to.equal(0);
+                        }
+
+                        wlEnabledMinters = wlRegulatedMinters.concat([
+                            wlNativeMinter,
+                        ]);
+
+                        await getPublicMinterSample();
+                    };
+
+                    const getPublicMinterSample = async () => {
+                        const publicMinterAccount:
+                            | SignerWithAddress
+                            | undefined = publicMinters.pop();
+
+                        expect(publicMinterAccount).to.not.be.undefined;
+
+                        if (publicMinterAccount != undefined) {
+                            const publicMinterBalance: number =
+                                await archOfPeace.balanceOf(
+                                    publicMinterAccount.address
+                                );
+
+                            const publicPrice: BigNumber =
+                                await archOfPeace.currentDefaultPrice();
+
+                            publicMinter = {
+                                account: publicMinterAccount,
+                                status: {
+                                    balance: publicMinterBalance,
+                                    price: publicPrice,
+                                },
+                            };
+                        }
+                    };
+
+                    beforeEach(async () => {
+                        if (chapter.minting.limit > 0) {
+                            await getMinterSamples();
                         }
                     });
 
@@ -488,8 +494,9 @@ describe('CONTRACT ArchOfPeace', () => {
                                   'MonuverseEpisode: whitelisting not allowed'
                               ));
 
+                    // TODO: regroup tests better and more efficiently
                     if (chapter.minting.limit > 0) {
-                        it('MUST NOT allow any minting with insufficient offer', async () => {
+                        it('MUST NOT allow any minting with insufficient offer for any minter type', async () => {
                             for (
                                 let i: number = 0;
                                 i < mintChapters.length;
@@ -657,7 +664,7 @@ describe('CONTRACT ArchOfPeace', () => {
                                 });
                             });
 
-                            it('MUST allow non-whitelisted to mint at public price', async () => {
+                            it('MUST allow non-whitelisted minters to mint at public price', async () => {
                                 expect(publicMinters.length).to.be.greaterThan(
                                     0
                                 );
@@ -707,7 +714,7 @@ describe('CONTRACT ArchOfPeace', () => {
                                 }
                             });
 
-                            it('MUST allow multiple minting transactions for minter until personal limit reached', async () => {
+                            it('MUST allow multiple minting transactions for each allowed minter until personal limit reached', async () => {
                                 expect(MAX_MINTABLE).to.be.greaterThan(0);
 
                                 for (let i: number = 0; i < MAX_MINTABLE; i++) {
@@ -808,7 +815,7 @@ describe('CONTRACT ArchOfPeace', () => {
                                 ).to.equal(balance + MAX_MINTABLE);
                             });
 
-                            it('MUST NOT allow non-whitelisted to mint', async () => {
+                            it('MUST NOT allow non-whitelisted minters to mint', async () => {
                                 expect(publicMinters.length).to.be.greaterThan(
                                     0
                                 );
@@ -1049,10 +1056,6 @@ describe('CONTRACT ArchOfPeace', () => {
                             })
                         );
 
-                        it(
-                            'MUST emit `ChapterMinted` OR `EpisodeMinted` when Chapter allocation is full'
-                        );
-
                         it('MUST only show veil for every single minted token', async () => {
                             const totalSupply: number =
                                 await archOfPeace.totalSupply();
@@ -1202,6 +1205,7 @@ describe('CONTRACT ArchOfPeace', () => {
                             );
                         });
 
+                        // TODO (optional): somehow stop transitioning and then uncomment
                         // it('MUST NOT allow another reveal request if seed is fulfilled', async () => {
                         //     await expect(
                         //         archOfPeace.reveal()
@@ -1219,20 +1223,215 @@ describe('CONTRACT ArchOfPeace', () => {
                         });
                     }
 
-                    // if (await archOfPeace.isFinal())
                     it(`MUST perform the "${transition.event}" transition`, async () => {
-                        if (transition.event == 'EpisodeMinted') {
-                            await expect(archOfPeace.sealMinting()).to.emit(
-                                archOfPeace,
-                                'EpisodeMinted'
+                        if (
+                            transition.event == 'EpisodeMinted' ||
+                            transition.event == 'ChapterMinted'
+                        ) {
+                            if (chapter.minting.limit == MAX_SUPPLY) {
+                                process.stdout.write(
+                                    '\t! chapter mint limit coincides with collection max supply\n'
+                                );
+                            }
+
+                            process.stdout.write(
+                                '\t> users are minting remaining chapter allocation'
                             );
+
+                            if (!chapter.minting.isOpen) {
+                                let supply: number = (
+                                    await archOfPeace.totalSupply()
+                                ).toNumber();
+
+                                expect(supply).to.be.below(
+                                    chapter.minting.limit
+                                );
+
+                                while (supply < chapter.minting.limit) {
+                                    process.stdout.write('.');
+                                    await getMinterSamples();
+
+                                    for (
+                                        let i: number = 0;
+                                        i < wlEnabledMinters.length;
+                                        i++
+                                    ) {
+                                        const minter: WhitelistedMinter =
+                                            wlEnabledMinters[i];
+
+                                        expect(
+                                            await archOfPeace.balanceOf(
+                                                minter.record.account.address
+                                            )
+                                        ).to.equal(0);
+
+                                        let quantity: number =
+                                            minter.record.limit;
+
+                                        const futureSupply: number =
+                                            supply + quantity;
+
+                                        const offer: BigNumber = BigNumber.from(
+                                            quantity
+                                        ).mul(minter.status.price);
+
+                                        if (
+                                            futureSupply < chapter.minting.limit
+                                        ) {
+                                            await (
+                                                await archOfPeace
+                                                    .connect(
+                                                        minter.record.account
+                                                    )
+                                                    [
+                                                        'mint(uint256,uint256,bytes32,bytes32[])'
+                                                    ](
+                                                        quantity,
+                                                        minter.record.limit,
+                                                        minter.record.chapter,
+                                                        minter.proof,
+                                                        { value: offer }
+                                                    )
+                                            ).wait();
+
+                                            expect(
+                                                await archOfPeace.totalSupply()
+                                            ).to.equal(futureSupply);
+                                        } else {
+                                            quantity =
+                                                quantity -
+                                                (futureSupply -
+                                                    chapter.minting.limit);
+
+                                            await expect(
+                                                archOfPeace
+                                                    .connect(
+                                                        minter.record.account
+                                                    )
+                                                    [
+                                                        'mint(uint256,uint256,bytes32,bytes32[])'
+                                                    ](
+                                                        quantity,
+                                                        minter.record.limit,
+                                                        minter.record.chapter,
+                                                        minter.proof,
+                                                        { value: offer }
+                                                    )
+                                            )
+                                                .to.emit(
+                                                    archOfPeace,
+                                                    transition.event
+                                                )
+                                                .withArgs(
+                                                    buffHashStr(
+                                                        transition.from
+                                                    ),
+                                                    buffHashStr(transition.to)
+                                                );
+                                        }
+
+                                        supply = (
+                                            await archOfPeace.totalSupply()
+                                        ).toNumber();
+
+                                        if (supply >= chapter.minting.limit) {
+                                            break;
+                                        }
+                                    }
+                                }
+                            } else {
+                                let supply: number = (
+                                    await archOfPeace.totalSupply()
+                                ).toNumber();
+
+                                expect(supply).to.be.below(
+                                    chapter.minting.limit
+                                );
+
+                                while (supply < chapter.minting.limit) {
+                                    process.stdout.write('.');
+                                    await getPublicMinterSample();
+
+                                    expect(
+                                        await archOfPeace.balanceOf(
+                                            publicMinter.account.address
+                                        )
+                                    ).to.equal(0);
+
+                                    const futureSupply: number =
+                                        supply + MAX_MINTABLE;
+
+                                    const offer: BigNumber = BigNumber.from(
+                                        MAX_MINTABLE
+                                    ).mul(publicMinter.status.price);
+
+                                    if (futureSupply < chapter.minting.limit) {
+                                        await (
+                                            await archOfPeace
+                                                .connect(publicMinter.account)
+                                                ['mint(uint256)'](
+                                                    MAX_MINTABLE,
+                                                    { value: offer }
+                                                )
+                                        ).wait();
+
+                                        expect(
+                                            await archOfPeace.totalSupply()
+                                        ).to.equal(futureSupply);
+                                    } else {
+                                        let quantity: number =
+                                            MAX_MINTABLE -
+                                            (futureSupply -
+                                                chapter.minting.limit);
+
+                                        await expect(
+                                            archOfPeace
+                                                .connect(publicMinter.account)
+                                                ['mint(uint256)'](quantity, {
+                                                    value: offer,
+                                                })
+                                        )
+                                            .to.emit(
+                                                archOfPeace,
+                                                transition.event
+                                            )
+                                            .withArgs(
+                                                buffHashStr(transition.from),
+                                                buffHashStr(transition.to)
+                                            );
+                                    }
+
+                                    supply = (
+                                        await archOfPeace.totalSupply()
+                                    ).toNumber();
+
+                                    if (supply >= chapter.minting.limit) {
+                                        break;
+                                    }
+                                }
+                            }
+
+                            process.stdout.write('\n');
+                        } else if (transition.event == 'MintingSealed') {
+                            process.stdout.write(
+                                '\t! sold out can not be reached\n'
+                            );
+
+                            await expect(archOfPeace.sealMinting())
+                                .to.emit(archOfPeace, 'MintingSealed')
+                                .withArgs(
+                                    buffHashStr(transition.from),
+                                    buffHashStr(transition.to)
+                                );
                         } else if (
                             transition.event == 'EpisodeProgressedOnlife'
                         ) {
-                            await expect(archOfPeace.emitOnlifeEvent()).to.emit(
-                                archOfPeace,
-                                'EpisodeProgressedOnlife'
-                            );
+                            await expect(archOfPeace.emitOnlifeEvent())
+                                .to.emit(archOfPeace, 'EpisodeProgressedOnlife')
+                                .withArgs(
+                                    buffHashStr(transition.from),
+                                    buffHashStr(transition.to)
+                                );
                         }
                     });
 
@@ -1242,60 +1441,7 @@ describe('CONTRACT ArchOfPeace', () => {
         });
     });
 
-    it('MUST only allow transfers after Mint is done');
-
-    it(
-        'MUST allow all users to mint multiple tokens at once'
-        // , async () => {
-        //     const userAllocation = Math.floor(maxSupply / users.length);
-
-        //     for (let i: number = 0; i < users.length; i++) {
-        //         await (
-        //             await archOfPeace
-        //                 .connect(users[i])
-        //                 ['mint(uint256,uint256,bytes32,bytes32[])'](4)
-        //         ).wait();
-        //         expect(await archOfPeace.balanceOf(users[i].address)).to.equal(
-        //             userAllocation
-        //         );
-        //     }
-        // }
-    );
-
-    it(
-        'MUST show each token as revealed Arch of Peace'
-        // , async () => {
-        //     const totalSupply: number = await archOfPeace.totalSupply();
-
-        //     let mappedMetadataIds: Set<number> = new Set<number>();
-
-        //     for (let i: number = 0; i < totalSupply; i++) {
-        //         const tokenURI: string = await archOfPeace.tokenURI(i);
-        //         expect(tokenURI.startsWith(baseURI)).to.be.true;
-        //         expect(tokenURI.length).to.be.greaterThan(baseURI.length);
-
-        //         const mappedMetadataId: number = Number(
-        //             tokenURI.slice(baseURI.length)
-        //         );
-        //         expect(mappedMetadataId).to.not.be.NaN;
-        //         expect(mappedMetadataIds.has(mappedMetadataId)).to.be.false;
-
-        //         mappedMetadataIds.add(mappedMetadataId);
-        //     }
-
-        //     expect(Math.min(...mappedMetadataIds)).to.equal(0);
-        //     expect(Math.max(...mappedMetadataIds)).to.equal(totalSupply - 1);
-        // }
-    );
-
     it('MUST NOT allow another reveal');
 
     it('MUST allow token burn');
 });
-
-// const paths: Array<Array<number>> = [
-//     [0, 0, 1, 0],
-//     [0, 0, 0, 1, 0],
-//     [0, 0, 0, 0, 1, 0],
-//     [0, 0, 0, 0, 0, 0],
-// ];

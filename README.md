@@ -1,8 +1,6 @@
-# Sample Hardhat Project
+# Arch Of Peace Collection
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
-
-Try running some of the following tasks:
+![](./episode.png)
 
 ```shell
 npx hardhat help

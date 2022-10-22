@@ -145,6 +145,7 @@ contract ArchOfPeace is
     function fulfillRandomWords(uint256, uint256[] memory randomWords)
         internal
         override
+        onlyRevealChapter
         emitsEpisodeRevealedEvent
     {
         super.fulfillRandomWords(0, randomWords);
@@ -154,24 +155,26 @@ contract ArchOfPeace is
         require(_minted > 0, "ArchOfPeace: no token minted");
 
         _maxSupply = _minted;
-        _emitMonumentalEvent(EpisodeMinted.selector);
+        _emitMonumentalEvent(MintingSealed.selector);
 
         return _maxSupply;
     }
 
+    // TODO: cover
     function burn(uint256 tokenId) public {
+        require(_exists(tokenId), "ArchOfPeace: non existent token");
         require(_msgSender() == ownerOf(tokenId), "ArchOfPeace: sender not token owner");
 
         super._burn(tokenId);
     }
 
+    // TODO: cover
     function withdraw() external onlyOwner {
         (bool success, ) = payable(owner()).call{value: address(this).balance}("");
 
         require(success, "ArchOfPeace: withdrawal unsuccessful");
     }
 
-    // TODO: pause/unpause
     /**
      * @notice Obtains mapped URI for an existing token.
      * @param tokenId existing token ID.
@@ -184,7 +187,7 @@ contract ArchOfPeace is
      * @return tokenURI token URI string
      */
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
-        require(ERC721Psi._exists(tokenId), "ArchOfPeace: non existent token");
+        require(_exists(tokenId), "ArchOfPeace: non existent token");
 
         return
             entropy() == 0
@@ -197,13 +200,5 @@ contract ArchOfPeace is
                 );
     }
 
-    function _beforeTokenTransfers(
-        address from,
-        address to,
-        uint256 startTokenId,
-        uint256 quantity
-    ) internal override onlyFinalChapter(from, to) {
-        // TODO: move address(0) check away from modifier
-        super._beforeTokenTransfers(from, to, startTokenId, quantity);
-    }
+    // TODO: pause/unpause
 }

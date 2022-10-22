@@ -39,6 +39,7 @@ interface IMonuverseEpisode {
 
     /// @notice Special Monumental Events
     event ChapterMinted(bytes32 prev, bytes32 current);
+    event MintingSealed(bytes32 prev, bytes32 current);
     event EpisodeMinted(bytes32 prev, bytes32 current);
     event EpisodeRevealed(bytes32 prev, bytes32 current);
     event EpisodeProgressedOnlife(bytes32 prev, bytes32 current);

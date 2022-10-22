@@ -57,6 +57,7 @@ contract ArchOfPeaceEntropy is VRFConsumerBaseV2, Ownable {
         _fulfilling = false;
     }
 
+    // TODO: cover
     function updateVRFParams(VRFRequestParams calldata newParams) public onlyOwner {
         _vrfRequestParams = newParams;
     }

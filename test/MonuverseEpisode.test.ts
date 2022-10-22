@@ -510,7 +510,7 @@ describe('CONTRACT MonuverseEpisode', async () => {
                 )
             ).to.be.revertedWith(updatesForbiddenError);
 
-            // TODO: insert initial chapter change heck
+            // TODO: insert initial chapter change check
 
             for (let e: number = 0; e < episode.length; e++) {
                 if (episode[e].minting.rules.length > 0) {
@@ -588,7 +588,7 @@ describe('CONTRACT MonuverseEpisode', async () => {
 
         it('MUST NOT allow whitelisting, minting or revealing in Final Chapter')
 
-        it('COULD NOT transition away from Final Chapter');
+        it('COULD NOT allow transitioning away from Final Chapter');
     });
 
     context(
@@ -729,24 +729,4 @@ describe('CONTRACT MonuverseEpisode', async () => {
     context('When Paused', () => {
         it('MUST NOT allow Chapter transitioning');
     });
-
-    // context('Episode Environments', async () => {
-    //     for (let i: number = 0; i < episode.length; i++) {
-    //         context(`"${episode[i].label}"`, async () => {
-    //             episode[i].whitelisting
-    //                 ? it('MUST allow whitelisting', async () => {})
-    //                 : it('MUST NOT allow whitelisting');
-
-    //             episode[i].minting.limit > 0
-    //                 ? it('Must allow minting')
-    //                 : it('MUST NOT allow minting');
-
-    //             episode[i].revealing, episode[i].isConclusion
-    //                 ? it('MUST allow revealing', async () => {
-    //                       // expect minting to be disabled
-    //                   })
-    //                 : it('MUST NOT allow revealing');
-    //         });
-    //     }
-    // });
 });

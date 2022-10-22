@@ -39,12 +39,12 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable, Pausable {
         _;
     }
 
-    modifier onlyFinalChapter(address from, address to) {
-        if (from != address(0)) {
-            require(_branching.isAccepting(_current), "MonuverseEpisode: chapter not final");
-        }
-        _;
-    }
+    // modifier onlyFinalChapter(address from, address to) {
+    //     if (from != address(0)) {
+    //         require(_branching.isAccepting(_current), "MonuverseEpisode: chapter not final");
+    //     }
+    //     _;
+    // }
 
     modifier emitsEpisodeRevealedEvent() {
         _;
@@ -68,7 +68,7 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable, Pausable {
         require(
             // Logical conversion from `isConlusion => everything disabled`
             !isConclusion || (!whitelisting && mintAllocation == 0 && !revealing),
-            "MonuverseEpisode: everything forbidden in Final Chapter"
+            "MonuverseEpisode: features disabled during conclusion"
         );
 
         require(
@@ -193,6 +193,8 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable, Pausable {
             emit EpisodeProgressedOnlife(prev, current);
         } else if (selector == EpisodeMinted.selector) {
             emit EpisodeMinted(prev, current);
+        } else if (selector == MintingSealed.selector) {
+            emit MintingSealed(prev, current);
         } else if (selector == EpisodeRevealed.selector) {
             emit EpisodeRevealed(prev, current);
         } else {
@@ -235,9 +237,9 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable, Pausable {
         return _offerMatchesGroupPrice(_hash(group), quantity, offer);
     }
 
-    function isFinal() public view returns (bool) {
-        return _branching.isAccepting(_current);
-    }
+    // function isFinal() public view returns (bool) {
+    //     return _branching.isAccepting(_current);
+    // }
 
     // returns current chapter price even for future forbidden chapters,
     // but it doesn't matter since `enabled` actually responds for allowing or not
@@ -245,8 +247,8 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable, Pausable {
         uint256 price;
 
         _chapters[_current].minting.rules[group].fixedPrice
-                    ? price = _chapters[group].minting.price
-                    : price = _chapters[_current].minting.price;
+            ? price = _chapters[group].minting.price
+            : price = _chapters[_current].minting.price;
 
         return price;
     }
