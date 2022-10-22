@@ -2,11 +2,10 @@
 
 ## Episode Lifecycle
 
-<p align="center">
     ![](./episode.png)
-</p>
 
 ## Other
+
 ```shell
 npx hardhat help
 npx hardhat test
