@@ -113,7 +113,14 @@ const episode: Array<Chapter> = [
         isConclusion: false,
     },
     {
-        label: 'Chapter V: A Monumental Reveal',
+        label: 'Chapter V: The Wild Age',
+        whitelisting: false,
+        minting: { limit: 0, price: 0, rules: [], isOpen: false },
+        revealing: false,
+        isConclusion: false,
+    },
+    {
+        label: 'Chapter VI: The Great Reveal',
         whitelisting: false,
         minting: { limit: 0, price: 0, rules: [], isOpen: false },
         revealing: true,
@@ -127,15 +134,6 @@ const episode: Array<Chapter> = [
         isConclusion: true,
     },
 ];
-
-// {
-//     label: 'Chapter V: The Great Bazaar',
-//     whitelisting: false,
-//     minting: { limit: 0, price: 0, rules: [], isOpen: false },
-//     market: true,
-//     revealing: false,
-//     isConclusion: false,
-// },
 
 const mintChapterProportions: Array<number> = [0, 100, 400, 700, 1001];
 
@@ -158,7 +156,7 @@ const branching: Array<Transition> = [
     {
         from: 'Chapter II: The Chosen Ones',
         event: 'EpisodeMinted',
-        to: 'Chapter V: A Monumental Reveal',
+        to: 'Chapter V: The Wild Age',
     },
     {
         from: 'Chapter III: The Believers',
@@ -168,28 +166,40 @@ const branching: Array<Transition> = [
     {
         from: 'Chapter III: The Believers',
         event: 'EpisodeMinted',
-        to: 'Chapter V: A Monumental Reveal',
+        to: 'Chapter V: The Wild Age',
     },
     {
         from: 'Chapter IV: The Brave',
         event: 'MintingSealed',
-        to: 'Chapter V: A Monumental Reveal',
+        to: 'Chapter V: The Wild Age',
     },
     {
         from: 'Chapter IV: The Brave',
         event: 'EpisodeMinted',
-        to: 'Chapter V: A Monumental Reveal',
+        to: 'Chapter V: The Wild Age',
     },
     {
-        from: 'Chapter V: A Monumental Reveal',
+        from: 'Chapter V: The Wild Age',
+        event: 'EpisodeProgressedOnlife',
+        to: 'Chapter VI: The Great Reveal',
+    },
+    {
+        from: 'Chapter VI: The Great Reveal',
         event: 'EpisodeRevealed',
         to: 'Conclusion: Monuverse',
     },
 ];
 
 const paths: Array<Array<Transition>> = [
-    [branching[0], branching[1], branching[3], branching[8]],
-    [branching[0], branching[1], branching[2], branching[5], branching[8]],
+    [branching[0], branching[1], branching[3], branching[8], branching[9]],
+    [
+        branching[0],
+        branching[1],
+        branching[2],
+        branching[5],
+        branching[8],
+        branching[9],
+    ],
     [
         branching[0],
         branching[1],
@@ -197,6 +207,7 @@ const paths: Array<Array<Transition>> = [
         branching[4],
         branching[7],
         branching[8],
+        branching[9],
     ],
     [
         branching[0],
@@ -205,6 +216,7 @@ const paths: Array<Array<Transition>> = [
         branching[4],
         branching[6],
         branching[8],
+        branching[9],
     ],
 ];
 
@@ -1434,10 +1446,17 @@ describe('CONTRACT ArchOfPeace', () => {
                                 );
                         }
                     });
-
-                    // TODO final chapter missing
                 });
             });
+
+            context(
+                `Final Chapter "${episode[episode.length - 1].label}"`,
+                () => {
+                    it(`MUST actually be in Final Chapter`, async () => {
+                        expect(await archOfPeace.isFinal()).to.be.true;
+                    });
+                }
+            );
         });
     });
 

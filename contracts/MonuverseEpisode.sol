@@ -237,9 +237,9 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable, Pausable {
         return _offerMatchesGroupPrice(_hash(group), quantity, offer);
     }
 
-    // function isFinal() public view returns (bool) {
-    //     return _branching.isAccepting(_current);
-    // }
+    function isFinal() public view returns (bool) {
+        return _branching.isAccepting(_current);
+    }
 
     // returns current chapter price even for future forbidden chapters,
     // but it doesn't matter since `enabled` actually responds for allowing or not
