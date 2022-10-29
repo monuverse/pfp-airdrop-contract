@@ -4,7 +4,7 @@ import { ethers } from 'hardhat';
 import { Contract, BigNumber } from 'ethers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
-import { MintGroupRules, Chapter, Transition } from './common';
+import { MintGroupRules, Chapter, Transition } from '../episode';
 
 const episode: Array<Chapter> = [
     {

@@ -7,16 +7,20 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { MerkleTree } from 'merkletreejs';
 import { keccak256 } from 'ethers/lib/utils';
 
+import { toWhitelistLeaf, buffHashStr, hashStr } from '../common';
+
 import {
     Chapter,
     Transition,
     WhitelistRecord,
-    toWhitelistLeaf,
-    writeEpisode,
-    buffHashStr,
-    hashStr,
     MintGroupRules,
-} from './common';
+    MAX_MINTABLE,
+    MAX_SUPPLY,
+    episode,
+    branching,
+} from '../episode';
+
+import { writeEpisode } from './common';
 
 type MintStatus = {
     balance: number;
@@ -34,161 +38,7 @@ type WhitelistedMinter = {
     status: MintStatus;
 };
 
-const MAX_SUPPLY: number = 111;
-
-const MAX_MINTABLE: number = 3;
-
-const episode: Array<Chapter> = [
-    {
-        label: 'Introduction: The Big Bang',
-        whitelisting: true,
-        minting: { limit: 0, price: 0, rules: [], isOpen: false },
-        revealing: false,
-        isConclusion: false,
-    },
-    {
-        label: 'Chapter I: The Arch Builders',
-        whitelisting: true,
-        minting: { limit: 11, price: 0, rules: [], isOpen: false },
-        revealing: false,
-        isConclusion: false,
-    },
-    {
-        label: 'Chapter II: The Chosen Ones',
-        whitelisting: false,
-        minting: {
-            limit: MAX_SUPPLY,
-            price: 0.09,
-            rules: [
-                {
-                    label: 'Chapter I: The Arch Builders',
-                    enabled: true,
-                    fixedPrice: true,
-                },
-            ],
-            isOpen: false,
-        },
-        revealing: false,
-        isConclusion: false,
-    },
-    {
-        label: 'Chapter III: The Believers',
-        whitelisting: false,
-        minting: {
-            limit: MAX_SUPPLY,
-            price: 0.09,
-            rules: [
-                {
-                    label: 'Chapter I: The Arch Builders',
-                    enabled: true,
-                    fixedPrice: true,
-                },
-                {
-                    label: 'Chapter II: The Chosen Ones',
-                    enabled: true,
-                    fixedPrice: false,
-                },
-            ],
-            isOpen: false,
-        },
-        revealing: false,
-        isConclusion: false,
-    },
-    {
-        label: 'Chapter IV: The Brave',
-        whitelisting: false,
-        minting: {
-            limit: MAX_SUPPLY,
-            price: 0.11,
-            rules: [
-                {
-                    label: 'Chapter I: The Arch Builders',
-                    enabled: true,
-                    fixedPrice: true,
-                },
-            ],
-            isOpen: true,
-        },
-        revealing: false,
-        isConclusion: false,
-    },
-    {
-        label: 'Chapter V: The Wild Age',
-        whitelisting: false,
-        minting: { limit: 0, price: 0, rules: [], isOpen: false },
-        revealing: false,
-        isConclusion: false,
-    },
-    {
-        label: 'Chapter VI: The Great Reveal',
-        whitelisting: false,
-        minting: { limit: 0, price: 0, rules: [], isOpen: false },
-        revealing: true,
-        isConclusion: false,
-    },
-    {
-        label: 'Conclusion: Monuverse',
-        whitelisting: false,
-        minting: { limit: 0, price: 0, rules: [], isOpen: false },
-        revealing: false,
-        isConclusion: true,
-    },
-];
-
 const mintChapterProportions: Array<number> = [0, 100, 400, 700, 1001];
-
-const branching: Array<Transition> = [
-    {
-        from: 'Introduction: The Big Bang',
-        event: 'EpisodeProgressedOnlife',
-        to: 'Chapter I: The Arch Builders',
-    },
-    {
-        from: 'Chapter I: The Arch Builders',
-        event: 'EpisodeProgressedOnlife',
-        to: 'Chapter II: The Chosen Ones',
-    },
-    {
-        from: 'Chapter II: The Chosen Ones',
-        event: 'EpisodeProgressedOnlife',
-        to: 'Chapter III: The Believers',
-    },
-    {
-        from: 'Chapter II: The Chosen Ones',
-        event: 'EpisodeMinted',
-        to: 'Chapter V: The Wild Age',
-    },
-    {
-        from: 'Chapter III: The Believers',
-        event: 'EpisodeProgressedOnlife',
-        to: 'Chapter IV: The Brave',
-    },
-    {
-        from: 'Chapter III: The Believers',
-        event: 'EpisodeMinted',
-        to: 'Chapter V: The Wild Age',
-    },
-    {
-        from: 'Chapter IV: The Brave',
-        event: 'MintingSealed',
-        to: 'Chapter V: The Wild Age',
-    },
-    {
-        from: 'Chapter IV: The Brave',
-        event: 'EpisodeMinted',
-        to: 'Chapter V: The Wild Age',
-    },
-    {
-        from: 'Chapter V: The Wild Age',
-        event: 'EpisodeProgressedOnlife',
-        to: 'Chapter VI: The Great Reveal',
-    },
-    {
-        from: 'Chapter VI: The Great Reveal',
-        event: 'EpisodeRevealed',
-        to: 'Conclusion: Monuverse',
-    },
-];
 
 const paths: Array<Array<Transition>> = [
     [branching[0], branching[1], branching[3], branching[8], branching[9]],

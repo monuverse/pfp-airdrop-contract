@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { Contract } from 'ethers';
-import { hashStr, hashNum } from './common';
+import { hashStr, hashNum } from '../common';
 
 type Transition = {
     from: number;

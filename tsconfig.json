@@ -9,6 +9,6 @@
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true
     },
-    "include": ["./scripts", "./test", "./tasks", "./typechain"],
+    "include": ["./scripts", "./test", "./tasks", "./typechain", "common.ts"],
     "files": ["./hardhat.config.ts"]
 }

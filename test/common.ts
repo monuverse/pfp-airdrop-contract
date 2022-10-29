@@ -1,40 +1,8 @@
-import { expect } from 'chai';
 import { ethers } from 'hardhat';
+import { expect } from 'chai';
 import { Contract } from 'ethers';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
-export type MintGroupRules = {
-    label: string;
-    enabled: boolean;
-    fixedPrice: boolean;
-};
-
-export type Minting = {
-    limit: number;
-    price: number;
-    rules: Array<MintGroupRules>;
-    isOpen: boolean;
-};
-
-export type Chapter = {
-    label: string;
-    minting: Minting;
-    whitelisting: boolean;
-    revealing: boolean;
-    isConclusion: boolean;
-};
-
-export type Transition = {
-    from: string;
-    event: string;
-    to: string;
-};
-
-export type WhitelistRecord = {
-    account: SignerWithAddress;
-    limit: number;
-    chapter: Buffer;
-};
+import { Chapter, Transition, MintGroupRules} from "../episode";
 
 export const writeEpisode = async (
     episodeContract: Contract,
@@ -105,32 +73,4 @@ export const writeEpisode = async (
             .to.emit(episodeContract, 'TransitionWritten')
             .withArgs(branching[i].from, branching[i].to, branching[i].event);
     }
-};
-
-export const toWhitelistLeaf = (
-    address: string,
-    limit: number,
-    chapter: Buffer
-): Buffer => {
-    return Buffer.from(
-        ethers.utils
-            .solidityKeccak256(
-                ['address', 'uint256', 'bytes32'],
-                [address, limit, chapter]
-            )
-            .slice(2),
-        'hex'
-    );
-};
-
-export const hashStr = (value: string) => {
-    return ethers.utils.solidityKeccak256(['string'], [value]);
-};
-
-export const buffHashStr = (value: string) => {
-    return Buffer.from(hashStr(value).slice(2), 'hex');
-};
-
-export const hashNum = (value: number) => {
-    return ethers.utils.solidityKeccak256(['uint256'], [value]);
 };

@@ -17,7 +17,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { MerkleTree } from 'merkletreejs';
 import { keccak256 } from 'ethers/lib/utils';
 
-import { WhitelistRecord, toWhitelistLeaf, buffHashStr } from './common';
+import { WhitelistRecord, toWhitelistLeaf, buffHashStr } from '../common';
 
 describe('CONTRACT ArchOfPeaceWhitelist', () => {
     let owner: SignerWithAddress;

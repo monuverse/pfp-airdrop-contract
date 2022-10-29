@@ -1,10 +1,11 @@
-import { HardhatUserConfig } from 'hardhat/config';
+import { HardhatUserConfig, types, task } from 'hardhat/config';
 import '@nomicfoundation/hardhat-toolbox';
 
 import * as dotenv from 'dotenv';
 
 // Tasks
 import './tasks/deploy';
+import './tasks/write';
 
 dotenv.config();
 
@@ -44,31 +45,29 @@ const config: HardhatUserConfig = {
         },
 
         goerli: {
-            url: process.env.DEV_GOERLI_RPC || '',
-            accounts: process.env.DEV_EOA_PRIV
-                ? [process.env.DEV_EOA_PRIV]
+            url: process.env.MVE_EVM_GOERLI_RPC || '',
+            accounts: process.env.MVE_EVM_PRIV_KEY
+                ? [process.env.MVE_EVM_PRIV_KEY]
+                : [],
+            gasPrice: 200000000000,
+        },
+
+        ethereum: {
+            url: process.env.MVE_EVM_ETH_RPC || '',
+            accounts: process.env.MVE_EVM_PRIV_KEY
+                ? [process.env.MVE_EVM_PRIV_KEY]
                 : [],
             gasPrice: 10000000000,
         },
-
-        rinkeby: {
-            url: process.env.DEV_RINK_RPC || '',
-            accounts: process.env.DEV_EOA_PRIV
-                ? [process.env.DEV_EOA_PRIV]
-                : [],
-            gasPrice: 5000000000,
-        },
-
-        // ethereum: {},
     },
 
     etherscan: {
         apiKey: {
-            goerli: process.env.ETHERSCAN_API_KEY
-                ? process.env.ETHERSCAN_API_KEY
+            goerli: process.env.MVE_ETHERSCAN_API_KEY
+                ? process.env.MVE_ETHERSCAN_API_KEY
                 : '',
-            rinkeby: process.env.ETHERSCAN_API_KEY
-                ? process.env.ETHERSCAN_API_KEY
+            ethereum: process.env.MVE_ETHERSCAN_API_KEY
+                ? process.env.MVE_ETHERSCAN_API_KEY
                 : '',
         },
     },
