@@ -173,13 +173,6 @@ contract ArchOfPeace is
         super._burn(tokenId);
     }
 
-    // TODO: cover
-    function withdraw() external onlyOwner {
-        (bool success, ) = payable(owner()).call{value: address(this).balance}("");
-
-        require(success, "ArchOfPeace: withdrawal unsuccessful");
-    }
-
     /**
      * @notice Obtains mapped URI for an existing token.
      * @param tokenId existing token ID.
