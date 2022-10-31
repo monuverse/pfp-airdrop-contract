@@ -5,6 +5,7 @@ import "./MonuverseEpisode.sol";
 import "erc721psi/contracts/extension/ERC721PsiBurnable.sol";
 import "./ArchOfPeaceEntropy.sol";
 import "./ArchOfPeaceWhitelist.sol";
+import "@openzeppelin/contracts/finance/PaymentSplitter.sol";
 
 import "fpe-map/contracts/FPEMap.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
@@ -53,7 +54,8 @@ contract ArchOfPeace is
     MonuverseEpisode,
     ArchOfPeaceEntropy,
     ArchOfPeaceWhitelist,
-    ERC721PsiBurnable
+    ERC721PsiBurnable,
+    PaymentSplitter
 {
     using FPEMap for uint256;
     using Strings for uint256;
@@ -72,11 +74,14 @@ contract ArchOfPeace is
         string memory initialChapter_,
         address vrfCoordinator_,
         bytes32 vrfGasLane_,
-        uint64 vrfSubscriptionId_
+        uint64 vrfSubscriptionId_,
+        address[] memory payee_,
+        uint256[] memory shares_
     )
         MonuverseEpisode(initialChapter_)
         ArchOfPeaceEntropy(vrfCoordinator_, vrfGasLane_, vrfSubscriptionId_)
         ERC721Psi(name_, symbol_)
+        PaymentSplitter(payee_, shares_)
     {
         _maxSupply = maxSupply_;
         _archVeilURI = archVeilURI_;

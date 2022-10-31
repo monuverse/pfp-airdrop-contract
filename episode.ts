@@ -27,12 +27,6 @@ export type Transition = {
     to: string;
 };
 
-export type WhitelistRecord = {
-    account: SignerWithAddress;
-    limit: number;
-    chapter: Buffer;
-};
-
 export const MAX_SUPPLY: number = 111;
 
 export const MAX_MINTABLE: number = 3;

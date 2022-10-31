@@ -57,7 +57,7 @@ const config: HardhatUserConfig = {
             accounts: process.env.MVE_EVM_PRIV_KEY
                 ? [process.env.MVE_EVM_PRIV_KEY]
                 : [],
-            gasPrice: 10000000000,
+            gasPrice: 10000000000
         },
     },
 

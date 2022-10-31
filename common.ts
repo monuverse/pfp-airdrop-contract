@@ -1,4 +1,11 @@
 import { ethers } from 'hardhat';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+
+export type WhitelistRecord = {
+    account: SignerWithAddress;
+    limit: number;
+    chapter: Buffer;
+};
 
 export const toWhitelistLeaf = (
     address: string,

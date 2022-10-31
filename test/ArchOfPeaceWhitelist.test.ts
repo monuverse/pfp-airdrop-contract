@@ -57,8 +57,12 @@ describe('CONTRACT ArchOfPeaceWhitelist', () => {
 
         archOfPeaceWl.setWhitelistRoot(whitelistRoot);
 
+        console.log('\t>', whitelistRoot);
+
         const deployedRoot = (await archOfPeaceWl.whitelistRoot()).slice(2);
         const offChainRoot = whitelistTree.getRoot().toString('hex');
+
+        console.log('\t>', offChainRoot);
 
         assert.equal(
             deployedRoot,

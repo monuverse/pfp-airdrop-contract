@@ -7,12 +7,11 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { MerkleTree } from 'merkletreejs';
 import { keccak256 } from 'ethers/lib/utils';
 
-import { toWhitelistLeaf, buffHashStr, hashStr } from '../common';
+import { WhitelistRecord, toWhitelistLeaf, buffHashStr, hashStr } from '../common';
 
 import {
     Chapter,
     Transition,
-    WhitelistRecord,
     MintGroupRules,
     MAX_MINTABLE,
     MAX_SUPPLY,

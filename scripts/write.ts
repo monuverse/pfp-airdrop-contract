@@ -1,3 +1,7 @@
+import {
+    TransactionReceipt,
+    TransactionResponse,
+} from '@ethersproject/providers';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import { MintGroupRules, episode, branching } from '../episode';
@@ -8,7 +12,7 @@ async function write(address: string, hre: HardhatRuntimeEnvironment) {
 
     console.log('Writing Chapters...');
     for (let i: number = 0; i < episode.length; i++) {
-        const chapterTx = await archOfPeace.writeChapter(
+        const chapterTx: TransactionResponse = await archOfPeace.writeChapter(
             episode[i].label,
             episode[i].whitelisting,
             episode[i].minting.limit,
@@ -21,24 +25,29 @@ async function write(address: string, hre: HardhatRuntimeEnvironment) {
             episode[i].isConclusion
         );
 
-        await chapterTx.wait();
-        console.log(chapterTx.transactionHash, 'tx for', episode[i].label);
+        const chapterTxReceipt: TransactionReceipt = await chapterTx.wait();
+        console.log(
+            chapterTxReceipt.transactionHash,
+            'tx for',
+            episode[i].label
+        );
 
         const rules: Array<MintGroupRules> = episode[i].minting.rules;
         for (let r: number = 0; r < rules.length; r++) {
-            const ruleTx = await archOfPeace.writeMintGroup(
-                episode[i].label,
-                rules[r].label,
-                {
-                    enabled: rules[r].enabled,
-                    fixedPrice: rules[r].fixedPrice,
-                }
-            );
+            const ruleTx: TransactionResponse =
+                await archOfPeace.writeMintGroup(
+                    episode[i].label,
+                    rules[r].label,
+                    {
+                        enabled: rules[r].enabled,
+                        fixedPrice: rules[r].fixedPrice,
+                    }
+                );
 
-            await ruleTx.wait();
+            const ruleTxReceipt: TransactionReceipt = await ruleTx.wait();
             console.log(
                 '\t',
-                ruleTx.transactionHash,
+                ruleTxReceipt.transactionHash,
                 'tx for',
                 episode[i].label,
                 'rule'
@@ -48,15 +57,21 @@ async function write(address: string, hre: HardhatRuntimeEnvironment) {
 
     console.log('Writing Branching...');
     for (let i: number = 0; i < branching.length; i++) {
-        const transitionTx = await archOfPeace.writeTransition(
-            branching[i].from,
-            branching[i].to,
-            branching[i].event
+        const transitionTx: TransactionResponse =
+            await archOfPeace.writeTransition(
+                branching[i].from,
+                branching[i].to,
+                branching[i].event
+            );
+
+        const transitionTxReceipt: TransactionReceipt =
+            await transitionTx.wait();
+
+        console.log(
+            transitionTxReceipt.transactionHash,
+            'tx for transition',
+            i
         );
-
-        await transitionTx.wait();
-
-        console.log(transitionTx.transactionHash, 'tx for transition', i);
     }
 }
 
