@@ -7,7 +7,12 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { MerkleTree } from 'merkletreejs';
 import { keccak256 } from 'ethers/lib/utils';
 
-import { WhitelistRecord, toWhitelistLeaf, buffHashStr, hashStr } from '../common';
+import {
+    WhitelistRecord,
+    toWhitelistLeaf,
+    buffHashStr,
+    hashStr,
+} from '../common';
 
 import {
     Chapter,
@@ -73,10 +78,12 @@ const mintChapters: Array<Chapter> = episode.filter(
     (chapter: Chapter) => chapter.minting.limit > 0 && !chapter.minting.isOpen
 );
 
+// episode.forEach((chapter) => {
+//     console.log(buffHashStr(chapter.label).toString('hex'));
+// });
+
 describe('CONTRACT ArchOfPeace', () => {
     paths.forEach((path, pathIndex) => {
-        let monuverse: SignerWithAddress;
-        let hacker: SignerWithAddress;
         let users: SignerWithAddress[] = [];
         let whitelist: WhitelistRecord[] = []; // subset of users
         let publicMinters: SignerWithAddress[] = []; // equals users - whitelist
@@ -84,6 +91,9 @@ describe('CONTRACT ArchOfPeace', () => {
         let remainingWhitelist: WhitelistRecord[] = []; // modifiable during tests
         let whitelistTree: MerkleTree;
         let whitelistRoot: Buffer;
+
+        const primaryShares: Array<number> = [60, 30, 10];
+        let primaryPayees: Array<string> = [];
 
         // Arch Of Peace
         const name: string = 'Monutest';
@@ -134,7 +144,16 @@ describe('CONTRACT ArchOfPeace', () => {
         };
 
         before(async () => {
-            [monuverse, hacker, ...users] = await ethers.getSigners();
+            users = await ethers.getSigners();
+
+            for (let i: number = 0; i < primaryShares.length; i++) {
+                const payee = users.pop()?.address;
+
+                expect(payee).to.not.be.undefined;
+                if (payee != undefined) {
+                    primaryPayees.push(payee);
+                }
+            }
 
             for (
                 let i: number = 1;
@@ -171,6 +190,10 @@ describe('CONTRACT ArchOfPeace', () => {
 
             whitelistRoot = whitelistTree.getRoot();
 
+            console.log(whitelist[0].account.address);
+            console.log(whitelist[0].chapter.toString('hex'));
+            console.log(getProof(whitelist[0].account.address));
+
             const VRFCoordinatorV2Mock = await ethers.getContractFactory(
                 'VRFCoordinatorV2Mock'
             );
@@ -192,9 +215,18 @@ describe('CONTRACT ArchOfPeace', () => {
                 episode[0].label,
                 vrfCoordinatorV2Mock.address,
                 vrfGaslane,
-                vrfSubscriptionId
+                vrfSubscriptionId,
+                primaryPayees,
+                primaryShares
             );
             await archOfPeace.deployed();
+
+            await archOfPeace.updateVRFParams({
+                gasLane: vrfGaslane,
+                subscriptionId: vrfSubscriptionId,
+                requestConfirmations: 3,
+                callbackGasLimit: 600000,
+            });
 
             vrfCoordinatorV2Mock.addConsumer(
                 vrfSubscriptionId,
@@ -205,12 +237,42 @@ describe('CONTRACT ArchOfPeace', () => {
 
             await (await archOfPeace.setWhitelistRoot(whitelistRoot)).wait();
 
+            expect(
+                await archOfPeace[
+                    'isAccountWhitelisted(address,uint256,bytes32,bytes32[])'
+                ](
+                    '0xFa111502D5f4B4902f14111fed8CFD910a356c1b',
+                    3,
+                    '0x9c73a005c8a24c96d44198313e479234c6b601b1f309e4a18c5c0a3a38150c66',
+                    [
+                        '0x53f515319d7d620f6da500f5327344c5a5b7f131ef640a023ed0623622bf81a2',
+                        '0xe3370229f81e57f0d67d698506a858c83f9ca2ec2e2111a64270f944728686a5',
+                        '0xd84a7022cf4cb91cebd29f3a9c4eea818e207c7563d493a0e10d514e7a745172',
+                        '0xee3f2f5a3fd6c14fe12af5e26d84aee67d653c1c782f236bd652b6dfdf46bcfc',
+                        '0x6447dcbda482104f4caff0442679386d26431520fe3c5dda3b463bc65ee904c1',
+                        '0xebf4ebabbdb6009bb64e012d46706e7e29e381ab078e8ea7d9945cba51c0a156',
+                        '0x78b4a2d40d9a898a3c3dfdefd41a76b12e63d759312be94ed95baed681d63a9f',
+                        '0x6b4afebb47cd89a1985c4dabc24f89fc93cc0949bce496634ae285957a1e2254',
+                        '0x5b178f3b779eb85fcde868f6a295a19cc84438aa58def99fad1b5180294c7800',
+                        '0x8cfc35b75ba8cdbca32f47fb8a873a6ad472eaf3d1a7095356606b2e9d1fced8',
+                    ]
+                )
+            ).to.be.true;
+
+            console.log(whitelistRoot.toString('hex'));
+
             expect((await archOfPeace.whitelistRoot()).slice(2)).to.equal(
                 whitelistRoot.toString('hex')
             );
         });
 
         context(`\nEpisode Path #${pathIndex + 1}`, () => {
+            let wlNativeMinter: WhitelistedMinter;
+            let wlRegulatedMinters: WhitelistedMinter[] = [];
+            let wlEnabledMinters: WhitelistedMinter[] = [];
+            let wlDisabledMinters: WhitelistedMinter[] = [];
+            let publicMinter: PublicMinter;
+
             path.forEach((transition) => {
                 const chapter: Chapter =
                     episode[
@@ -220,12 +282,6 @@ describe('CONTRACT ArchOfPeace', () => {
                     ];
 
                 context(`Chapter "${chapter.label}"`, () => {
-                    let wlNativeMinter: WhitelistedMinter;
-                    let wlRegulatedMinters: WhitelistedMinter[] = [];
-                    let wlEnabledMinters: WhitelistedMinter[] = [];
-                    let wlDisabledMinters: WhitelistedMinter[] = [];
-                    let publicMinter: PublicMinter;
-
                     const getMinterSamples = async () => {
                         for (let i: number = 0; i < mintChapters.length; i++) {
                             const mintChapter = mintChapters[i];
@@ -1304,12 +1360,82 @@ describe('CONTRACT ArchOfPeace', () => {
                     it(`MUST actually be in Final Chapter`, async () => {
                         expect(await archOfPeace.isFinal()).to.be.true;
                     });
+
+                    it('MUST allow primary market share release correctly', async () => {
+                        expect(await archOfPeace.isFinal()).to.be.true;
+
+                        for (let i: number = 0; i < primaryShares.length; i++) {
+                            const balance = await ethers.provider.getBalance(
+                                primaryPayees[i]
+                            );
+
+                            const releasable = await archOfPeace[
+                                'releasable(address)'
+                            ](primaryPayees[i]);
+
+                            await expect(
+                                archOfPeace['release(address)'](
+                                    primaryPayees[i]
+                                )
+                            )
+                                .to.emit(archOfPeace, 'PaymentReleased')
+                                .withArgs(primaryPayees[i], releasable);
+
+                            expect(
+                                await ethers.provider.getBalance(
+                                    primaryPayees[i]
+                                )
+                            ).to.equal(releasable.add(balance));
+                        }
+
+                        await expect(
+                            archOfPeace['release(address)'](users[0].address)
+                        ).to.be.revertedWith(
+                            'PaymentSplitter: account has no shares'
+                        );
+                    });
+
+                    it('MUST allow burning to token owner only', async () => {
+                        const tokenId: number = 1;
+                        const owner: string = await archOfPeace.ownerOf(
+                            tokenId
+                        );
+                        const ownerAccount: SignerWithAddress | undefined =
+                            users.find((user) => user.address == owner);
+                        const supply = await archOfPeace.totalSupply();
+
+                        await expect(
+                            archOfPeace.burn(MAX_SUPPLY + 1)
+                        ).to.be.revertedWith('ArchOfPeace: non existent token');
+
+                        await expect(
+                            archOfPeace.burn(tokenId)
+                        ).to.be.revertedWith(
+                            'ArchOfPeace: sender not token owner'
+                        );
+
+                        expect(ownerAccount).to.not.be.undefined;
+
+                        if (ownerAccount) {
+                            expect(
+                                await archOfPeace
+                                    .connect(ownerAccount)
+                                    .burn(tokenId)
+                            )
+                                .to.emit(archOfPeace, 'Transfer')
+                                .withArgs(
+                                    owner,
+                                    '0x0000000000000000000000000000000000000000',
+                                    tokenId
+                                );
+                        }
+
+                        expect(await archOfPeace.totalSupply()).to.equal(
+                            supply.sub(1)
+                        );
+                    });
                 }
             );
         });
     });
-
-    it('MUST NOT allow another reveal');
-
-    it('MUST allow token burn');
 });

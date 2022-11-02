@@ -36,17 +36,17 @@ contract DFAMock {
         _dfa.addTransition(from, to, symbol);
     }
 
-    function removeTransition(bytes32 from, bytes32 symbol) public {
-        _dfa.removeTransition(from, symbol);
-    }
+    // function removeTransition(bytes32 from, bytes32 symbol) public {
+    //     _dfa.removeTransition(from, symbol);
+    // }
 
     function addAccepting(bytes32 state) public {
         _dfa.addAccepting(state);
     }
 
-    function removeAccepting(bytes32 state) public {
-        _dfa.removeAccepting(state);
-    }
+    // function removeAccepting(bytes32 state) public {
+    //     _dfa.removeAccepting(state);
+    // }
 
     function transition(bytes32 symbol) public returns (bytes32) {
         _current = destination(_current, symbol);

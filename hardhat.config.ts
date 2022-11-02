@@ -6,6 +6,7 @@ import * as dotenv from 'dotenv';
 // Tasks
 import './tasks/deploy';
 import './tasks/write';
+import './tasks/whitelist';
 
 dotenv.config();
 

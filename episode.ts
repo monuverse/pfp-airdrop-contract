@@ -1,5 +1,3 @@
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
-
 export type MintGroupRules = {
     label: string;
     enabled: boolean;
@@ -30,6 +28,41 @@ export type Transition = {
 export const MAX_SUPPLY: number = 111;
 
 export const MAX_MINTABLE: number = 3;
+
+export const MAP: Map<string, string> = new Map([
+    [
+        'Introduction: The Big Bang',
+        '0xf7557b1a7545ca9a1730dba009cddef7e4c1b08a16a141bb5664bbb7b76d5861',
+    ],
+    [
+        'Chapter I: The Arch Builders',
+        '0x9c73a005c8a24c96d44198313e479234c6b601b1f309e4a18c5c0a3a38150c66',
+    ],
+    [
+        'Chapter II: The Chosen Ones',
+        '0x4a4c10af8de97324f726ee2cbf52ae641d18201ac5f0f77ec4e239388d49e000',
+    ],
+    [
+        'Chapter III: The Believers`,',
+        '0x82bea18981b7635dcb02e5247be6b2b5e462b7ba93db3e773aa5806c629d59d6',
+    ],
+    [
+        'Chapter IV: The Brave`,',
+        '0xc6678872f9ee2e09dd78a828f66de1015f7d3970fb6a174552bed5fa699a5daa',
+    ],
+    [
+        'Chapter V: The Wild Age',
+        '0x3f00e274290a798371e2b3cb18bf8ebd40d00e96c70a18f114ab9d6f96915306',
+    ],
+    [
+        'Chapter VI: The Great Reveal',
+        '0xb3de280950b0f33f29c3849cf05df3f24dea40eeefef943c63e498ee39c0ee77',
+    ],
+    [
+        'Conclusion: Monuverse',
+        '0x4303db6358dfe701468de46530e7892495a757cc9fe8c0c161116799c2a99e40',
+    ],
+]);
 
 export const episode: Array<Chapter> = [
     {

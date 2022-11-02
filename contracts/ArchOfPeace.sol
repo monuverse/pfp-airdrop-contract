@@ -33,7 +33,7 @@ import "@openzeppelin/contracts/utils/Strings.sol";
     | |  | | |_| | |\  | \_░ |  \ ▒▒█▒▒ /__  /___  _  _, _/____/ /_  /___
     |_|  |_|\___/|_| \_|\___/    \ ███ /  /_____/  /_/ |_| /____/ /_____/
                                   \ █ /
-    a Reasoned Art project         \*/
+        creativity by Ouchhh       \*/
 
 /**
  * @title Monuverse Episode 1 ─ Arch Of Peace
@@ -165,7 +165,6 @@ contract ArchOfPeace is
         return _maxSupply;
     }
 
-    // TODO: cover
     function burn(uint256 tokenId) public {
         require(_exists(tokenId), "ArchOfPeace: non existent token");
         require(_msgSender() == ownerOf(tokenId), "ArchOfPeace: sender not token owner");
@@ -197,6 +196,4 @@ contract ArchOfPeace is
                     )
                 );
     }
-
-    // TODO: pause/unpause
 }
