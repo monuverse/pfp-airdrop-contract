@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.16;
+pragma solidity 0.8.17;
 
 import "./MonuverseEpisode.sol";
 import "erc721psi/contracts/extension/ERC721PsiBurnable.sol";
@@ -65,6 +65,8 @@ contract ArchOfPeace is
     string private _archVeilURI;
     string private _archBaseURI;
 
+    mapping (address => uint256) _mintCounter;
+
     constructor(
         uint256 maxSupply_,
         string memory name_,
@@ -111,17 +113,19 @@ contract ArchOfPeace is
         }
         require(entropy() == 0, "ArchOfPeace: already revealed");
         require(
-            _isQuantityWhitelisted(balanceOf(_msgSender()), quantity, limit),
+            _isQuantityWhitelisted(_mintCounter[_msgSender()], quantity, limit),
             "ArchOfPeace: quantity not allowed"
         );
         require(_chapterAllowsMint(quantity, _minted), "ArchOfPeace: no mint chapter");
         require(_chapterAllowsMintGroup(group), "ArchOfPeace: group not allowed");
         require(_chapterMatchesOffer(quantity, msg.value, group), "ArchOfPeace: offer unmatched");
 
-        _safeMint(_msgSender(), quantity);
+        _mint(_msgSender(), quantity);
 
-        if (_minted == _chapterMintLimit()) {
-            _maxSupply == _chapterMintLimit()
+        _mintCounter[_msgSender()] += quantity;
+
+        if (_minted == chapterMintLimit()) {
+            _maxSupply == chapterMintLimit()
                 ? _emitMonumentalEvent(EpisodeMinted.selector)
                 : _emitMonumentalEvent(ChapterMinted.selector);
         }
@@ -195,5 +199,9 @@ contract ArchOfPeace is
                         tokenId.fpeMappingFeistelAuto(entropy(), _maxSupply).toString()
                     )
                 );
+    }
+
+    function tokensMintedByUser(address minter) public view returns (uint256) {
+        return _mintCounter[minter];
     }
 }

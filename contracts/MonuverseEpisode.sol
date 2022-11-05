@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.16;
+pragma solidity 0.8.17;
 
 import "./IMonuverseEpisode.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -39,13 +39,6 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable, Pausable {
         _;
     }
 
-    // modifier onlyFinalChapter(address from, address to) {
-    //     if (from != address(0)) {
-    //         require(_branching.isAccepting(_current), "MonuverseEpisode: chapter not final");
-    //     }
-    //     _;
-    // }
-
     modifier emitsEpisodeRevealedEvent() {
         _;
         _emitMonumentalEvent(EpisodeRevealed.selector);
@@ -56,6 +49,11 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable, Pausable {
         _branching.setInitial(_current);
     }
 
+    /**
+     * @dev It's still possible to insert mint chapter after reveal chapter
+     * @dev since DFAs don't have state order guarantees: make mint function
+     * @dev check for occured reveal.
+     */
     function writeChapter(
         string memory label,
         bool whitelisting,
@@ -66,7 +64,7 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable, Pausable {
         bool isConclusion
     ) public onlyOwner onlyInitialChapter returns (bytes32) {
         require(
-            // Logical conversion from `isConlusion => everything disabled`
+            /// @dev Logical conversion from `isConlusion => everything disabled`
             !isConclusion || (!whitelisting && mintAllocation == 0 && !revealing),
             "MonuverseEpisode: features disabled during conclusion"
         );
@@ -76,8 +74,6 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable, Pausable {
             "MonuverseEpisode: reveal with mint forbidden"
         );
 
-        // Still possible to insert mint chapter after reveal chapter since DFAs don't
-        // have state order guarantees, make mint function check for occured reveal
         _chapters[_hash(label)].whitelisting = whitelisting;
         _chapters[_hash(label)].minting.limit = mintAllocation;
         _chapters[_hash(label)].minting.price = mintPrice;
@@ -102,7 +98,7 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable, Pausable {
         return _hash(label);
     }
 
-    /// @dev Chapter-related transitions should be separately removed before.
+    /// @dev Chapter-related transitions should be separately removed before,
     /// @dev MintGroupRules should be removed separately before.
     function removeChapter(string calldata label) external onlyOwner onlyInitialChapter {
         require(_branching.initial() != _hash(label), "MonuverseEpisode: initial non deletable");
@@ -169,11 +165,13 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable, Pausable {
         _emitMonumentalEvent(EpisodeProgressedOnlife.selector);
     }
 
-    /// @dev `aux` equals `_current` when transition destination is same as origin,
-    /// @dev `aux` equals `_current` also when no transition has been specified,
-    /// @dev (to prevent user from seeing its tx reverted)
-    /// @return aux previous state, 0x00 if no transition exists
-    /// @return _current new current post-transition state
+    /**
+     * @dev `aux` equals `_current` when transition destination is same as origin,
+     * @dev `aux` equals `_current` also when no transition has been specified,
+     * @dev (to prevent user from seeing its tx reverted)
+     * @return aux previous state, 0x00 if no transition exists
+     * @return _current new current post-transition state
+     */
     function _tryTransition(bytes32 symbol) private returns (bytes32, bytes32) {
         bytes32 aux = _branching.transition(_current, symbol);
 
@@ -221,6 +219,10 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable, Pausable {
         );
     }
 
+    function chapterMintLimit() public view returns (uint256) {
+        return _chapters[_current].minting.limit;
+    }
+
     function currentDefaultPrice() public view returns (uint256) {
         return _currentGroupPrice(_current);
     }
@@ -241,8 +243,15 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable, Pausable {
         return _branching.isAccepting(_current);
     }
 
-    // returns current chapter price even for future forbidden chapters,
-    // but it doesn't matter since `enabled` actually responds for allowing or not
+    /**
+     * @notice Calculates current group price for minting.
+     *
+     * @dev Also works when minting is forbidden, but it doesn't matter
+     * @dev since `enabled` actually responds for allowing it or not.
+     *
+     * @param group for which current price has to be calculated
+     * @return price of minting.
+     */
     function _currentGroupPrice(bytes32 group) internal view returns (uint256) {
         uint256 price;
 
@@ -261,21 +270,23 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable, Pausable {
         return quantity * _currentGroupPrice(group) <= offer;
     }
 
+    /**
+     * @notice Checks for two conditions at once:
+     * @notice (a) if minting allowed at all (current chapter allocation > 0), and
+     * @notice (b) if current available chapter allocation is not enough for quantity.
+     */
     function _chapterAllowsMint(uint256 quantity, uint256 minted) internal view returns (bool) {
-        // This single require checks for two conditions at once:
-        // (a) if minting allowed at all (current chapter allocation > 0), and
-        // (b) if current available chapter allocation is not enough for quantity
         return minted + quantity <= _chapters[_current].minting.limit;
     }
 
     function _chapterAllowsOpenMint() internal view returns (bool) {
-        // This single require checks for two conditions at once:
-        // (a) if minting allowed at all (current chapter allocation > 0), and
-        // (b) if current available chapter allocation is not enough for quantity
         return _chapters[_current].minting.isOpen;
     }
 
-    // true if is born now, is explicitly allowed to mint, is public minting allowed
+    /**
+     * @param group of Minters.
+     * @return boolean true if group is current chapter, is open mint or enabled.
+     */
     function _chapterAllowsMintGroup(bytes32 group) internal view returns (bool) {
         return
             group == _current ||
@@ -289,10 +300,6 @@ contract MonuverseEpisode is IMonuverseEpisode, Ownable, Pausable {
         bytes32 group
     ) internal view returns (bool) {
         return quantity * _currentGroupPrice(group) <= offer;
-    }
-
-    function _chapterMintLimit() internal view returns (uint256) {
-        return _chapters[_current].minting.limit;
     }
 
     function _hash(string memory str) internal pure returns (bytes32) {

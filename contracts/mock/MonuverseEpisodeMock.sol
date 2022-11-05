@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.16;
+pragma solidity 0.8.17;
 
 import "../MonuverseEpisode.sol";
 
@@ -28,9 +28,5 @@ contract MonuverseEpisodeMock is MonuverseEpisode {
         bytes32 birth
     ) internal view returns (bool) {
         return MonuverseEpisode._chapterMatchesOffer(quantity, offer, birth);
-    }
-
-    function chapterMintLimit() internal view returns (uint256) {
-        return MonuverseEpisode._chapterMintLimit();
     }
 }

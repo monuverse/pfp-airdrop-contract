@@ -24,6 +24,7 @@
         "erc721psi": "^0.6.1",
         "ethers": "^5.4.7",
         "fpe-map": "^0.1.1",
+        "fs": "^0.0.1-security",
         "hardhat": "^2.10.1",
         "hardhat-gas-reporter": "^1.0.8",
         "prettier": "^2.7.1",

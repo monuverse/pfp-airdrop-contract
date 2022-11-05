@@ -12,7 +12,7 @@ dotenv.config();
 
 const config: HardhatUserConfig = {
     solidity: {
-        version: '0.8.16',
+        version: '0.8.17',
         settings: {
             optimizer: {
                 enabled: true,
@@ -50,7 +50,7 @@ const config: HardhatUserConfig = {
             accounts: process.env.MVE_EVM_PRIV_KEY
                 ? [process.env.MVE_EVM_PRIV_KEY]
                 : [],
-            gasPrice: 200000000000,
+            gasPrice: 250000000000,
         },
 
         ethereum: {
