@@ -4,9 +4,8 @@ import '@nomicfoundation/hardhat-toolbox';
 import * as dotenv from 'dotenv';
 
 // Tasks
-import './tasks/deploy';
-import './tasks/write';
-import './tasks/whitelist';
+// import './tasks/deploy';
+// import './tasks/write';
 
 dotenv.config();
 

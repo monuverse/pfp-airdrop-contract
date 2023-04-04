@@ -51,7 +51,7 @@ contract ArchOfPeaceEntropy is VRFConsumerBaseV2, Ownable {
     function fulfillRandomWords(
         uint256, /* requestId */
         uint256[] memory randomWords
-    ) internal virtual override {
+    ) internal override {
         _entropy = randomWords[0];
 
         _fulfilling = false;

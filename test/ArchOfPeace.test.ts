@@ -4,97 +4,11 @@ import { ethers } from 'hardhat';
 import { BigNumber, Contract } from 'ethers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
-import { MerkleTree } from 'merkletreejs';
-import { keccak256 } from 'ethers/lib/utils';
 
-import {
-    WhitelistRecord,
-    toWhitelistLeaf,
-    buffHashStr,
-    hashStr,
-} from '../common';
 
-import {
-    Chapter,
-    Transition,
-    MintGroupRules,
-    MAX_MINTABLE,
-    MAX_SUPPLY,
-    episode,
-    branching,
-} from '../episode';
-
-import { writeEpisode } from './common';
-
-type MintStatus = {
-    balance: number;
-    price: BigNumber;
-};
-
-type PublicMinter = {
-    account: SignerWithAddress;
-    status: MintStatus;
-};
-
-type WhitelistedMinter = {
-    record: WhitelistRecord;
-    proof: string[];
-    status: MintStatus;
-};
-
-const mintChapterProportions: Array<number> = [0, 100, 400, 700, 1001];
-
-const paths: Array<Array<Transition>> = [
-    [branching[0], branching[1], branching[3], branching[8], branching[9]],
-    [
-        branching[0],
-        branching[1],
-        branching[2],
-        branching[5],
-        branching[8],
-        branching[9],
-    ],
-    [
-        branching[0],
-        branching[1],
-        branching[2],
-        branching[4],
-        branching[7],
-        branching[8],
-        branching[9],
-    ],
-    [
-        branching[0],
-        branching[1],
-        branching[2],
-        branching[4],
-        branching[6],
-        branching[8],
-        branching[9],
-    ],
-];
-
-const mintChapters: Array<Chapter> = episode.filter(
-    (chapter: Chapter) => chapter.minting.limit > 0 && !chapter.minting.isOpen
-);
-
-// episode.forEach((chapter) => {
-//     console.log(buffHashStr(chapter.label).toString('hex'));
-// });
+const MAX_SUPPLY: number = 1111;
 
 describe('CONTRACT ArchOfPeace', () => {
-    paths.forEach((path, pathIndex) => {
-        let users: SignerWithAddress[] = [];
-        let whitelist: WhitelistRecord[] = []; // subset of users
-        let publicMinters: SignerWithAddress[] = []; // equals users - whitelist
-
-        let remainingWhitelist: WhitelistRecord[] = []; // modifiable during tests
-        let whitelistTree: MerkleTree;
-        let whitelistRoot: Buffer;
-
-        const primaryShares: Array<number> = [60, 30, 10];
-        let primaryPayees: Array<string> = [];
-
         // Arch Of Peace
         const name: string = 'Monutest';
         const symbol: string = 'MNT';
@@ -111,88 +25,10 @@ describe('CONTRACT ArchOfPeace', () => {
         );
         let vrfCoordinatorV2Mock: Contract;
 
-        const getWhitelistedMinter = (label: string): WhitelistRecord => {
-            const isRightMinter = (record: WhitelistRecord) =>
-                record.chapter.equals(buffHashStr(label));
-
-            const minterIndex: number = remainingWhitelist.findIndex((record) =>
-                isRightMinter(record)
-            );
-
-            expect(minterIndex).to.be.greaterThan(-1);
-
-            const minter = remainingWhitelist[minterIndex];
-
-            remainingWhitelist.splice(minterIndex, 1);
-
-            return minter;
-        };
-
-        const getProof = (address: string): string[] => {
-            const isRightLeaf = (record: WhitelistRecord) =>
-                record.account.address == address;
-
-            const leafIndex: number = whitelist.findIndex((record) =>
-                isRightLeaf(record)
-            );
-
-            expect(leafIndex).to.be.greaterThan(-1);
-
-            return whitelistTree.getHexProof(
-                whitelistTree.getLeaves()[leafIndex]
-            );
-        };
+        
 
         before(async () => {
-            users = await ethers.getSigners();
-
-            for (let i: number = 0; i < primaryShares.length; i++) {
-                const payee = users.pop()?.address;
-
-                expect(payee).to.not.be.undefined;
-                if (payee != undefined) {
-                    primaryPayees.push(payee);
-                }
-            }
-
-            for (
-                let i: number = 1;
-                i < mintChapterProportions.length - 1;
-                i++
-            ) {
-                whitelist = whitelist.concat(
-                    users
-                        .slice(
-                            mintChapterProportions[i - 1],
-                            mintChapterProportions[i]
-                        )
-                        .map((user) => ({
-                            account: user,
-                            limit: MAX_MINTABLE,
-                            chapter: buffHashStr(episode[i].label),
-                        }))
-                );
-            }
-            remainingWhitelist = [...whitelist];
-
-            publicMinters = users.slice(
-                mintChapterProportions[mintChapterProportions.length - 2],
-                mintChapterProportions[mintChapterProportions.length - 1]
-            );
-
-            let whitelistLeaves = whitelist.map((user) =>
-                toWhitelistLeaf(user.account.address, user.limit, user.chapter)
-            );
-
-            whitelistTree = new MerkleTree(whitelistLeaves, keccak256, {
-                sortPairs: true,
-            });
-
-            whitelistRoot = whitelistTree.getRoot();
-
-            console.log(whitelist[0].account.address);
-            console.log(whitelist[0].chapter.toString('hex'));
-            console.log(getProof(whitelist[0].account.address));
+            // users = await ethers.getSigners();
 
             const VRFCoordinatorV2Mock = await ethers.getContractFactory(
                 'VRFCoordinatorV2Mock'
@@ -212,12 +48,9 @@ describe('CONTRACT ArchOfPeace', () => {
                 symbol,
                 veilURI,
                 baseURI,
-                episode[0].label,
                 vrfCoordinatorV2Mock.address,
                 vrfGaslane,
                 vrfSubscriptionId,
-                primaryPayees,
-                primaryShares
             );
             await archOfPeace.deployed();
 
@@ -232,184 +65,13 @@ describe('CONTRACT ArchOfPeace', () => {
                 vrfSubscriptionId,
                 archOfPeace.address
             );
-
-            await writeEpisode(archOfPeace, episode, branching);
-
-            await (await archOfPeace.setWhitelistRoot(whitelistRoot)).wait();
-
-            expect(
-                await archOfPeace[
-                    'isAccountWhitelisted(address,uint256,bytes32,bytes32[])'
-                ](
-                    '0xFa111502D5f4B4902f14111fed8CFD910a356c1b',
-                    3,
-                    '0x9c73a005c8a24c96d44198313e479234c6b601b1f309e4a18c5c0a3a38150c66',
-                    [
-                        '0x53f515319d7d620f6da500f5327344c5a5b7f131ef640a023ed0623622bf81a2',
-                        '0xe3370229f81e57f0d67d698506a858c83f9ca2ec2e2111a64270f944728686a5',
-                        '0xd84a7022cf4cb91cebd29f3a9c4eea818e207c7563d493a0e10d514e7a745172',
-                        '0xee3f2f5a3fd6c14fe12af5e26d84aee67d653c1c782f236bd652b6dfdf46bcfc',
-                        '0x6447dcbda482104f4caff0442679386d26431520fe3c5dda3b463bc65ee904c1',
-                        '0xebf4ebabbdb6009bb64e012d46706e7e29e381ab078e8ea7d9945cba51c0a156',
-                        '0x78b4a2d40d9a898a3c3dfdefd41a76b12e63d759312be94ed95baed681d63a9f',
-                        '0x6b4afebb47cd89a1985c4dabc24f89fc93cc0949bce496634ae285957a1e2254',
-                        '0x5b178f3b779eb85fcde868f6a295a19cc84438aa58def99fad1b5180294c7800',
-                        '0x8cfc35b75ba8cdbca32f47fb8a873a6ad472eaf3d1a7095356606b2e9d1fced8',
-                    ]
-                )
-            ).to.be.true;
-
-            console.log(whitelistRoot.toString('hex'));
-
-            expect((await archOfPeace.whitelistRoot()).slice(2)).to.equal(
-                whitelistRoot.toString('hex')
-            );
         });
 
         context(`\nEpisode Path #${pathIndex + 1}`, () => {
-            let wlNativeMinter: WhitelistedMinter;
-            let wlRegulatedMinters: WhitelistedMinter[] = [];
-            let wlEnabledMinters: WhitelistedMinter[] = [];
-            let wlDisabledMinters: WhitelistedMinter[] = [];
-            let publicMinter: PublicMinter;
 
-            path.forEach((transition) => {
-                const chapter: Chapter =
-                    episode[
-                        episode.findIndex(
-                            (chapter) => chapter.label == transition.from
-                        )
-                    ];
 
                 context(`Chapter "${chapter.label}"`, () => {
-                    const getMinterSamples = async () => {
-                        for (let i: number = 0; i < mintChapters.length; i++) {
-                            const mintChapter = mintChapters[i];
-
-                            const wlMinter: WhitelistRecord =
-                                getWhitelistedMinter(mintChapter.label);
-
-                            expect(wlMinter).to.not.be.undefined;
-
-                            const proof: string[] = getProof(
-                                wlMinter.account.address
-                            );
-
-                            const balance: number = await archOfPeace.balanceOf(
-                                wlMinter.account.address
-                            );
-
-                            const price: BigNumber =
-                                await archOfPeace.currentGroupPrice(
-                                    mintChapter.label
-                                );
-
-                            const isNativeMinter: boolean =
-                                mintChapter.label == chapter.label;
-
-                            const rule: MintGroupRules | undefined =
-                                chapter.minting.rules.find(
-                                    (rule) => rule.label == mintChapter.label
-                                );
-
-                            if (isNativeMinter) {
-                                wlNativeMinter = {
-                                    record: wlMinter,
-                                    proof: proof,
-                                    status: {
-                                        balance: balance,
-                                        price: price,
-                                    },
-                                };
-                            } else if (!isNativeMinter && rule != undefined) {
-                                wlRegulatedMinters = [];
-                                wlRegulatedMinters.push({
-                                    record: wlMinter,
-                                    proof: proof,
-                                    status: {
-                                        balance: balance,
-                                        price: price,
-                                    },
-                                });
-                            } else if (!isNativeMinter && rule == undefined) {
-                                wlDisabledMinters = [];
-                                wlDisabledMinters.push({
-                                    record: wlMinter,
-                                    proof: proof,
-                                    status: {
-                                        balance: balance,
-                                        price: price,
-                                    },
-                                });
-                            }
-
-                            expect(
-                                await archOfPeace.balanceOf(
-                                    wlMinter.account.address
-                                )
-                            ).to.equal(0);
-                        }
-
-                        wlEnabledMinters = wlRegulatedMinters.concat([
-                            wlNativeMinter,
-                        ]);
-
-                        await getPublicMinterSample();
-                    };
-
-                    const getPublicMinterSample = async () => {
-                        const publicMinterAccount:
-                            | SignerWithAddress
-                            | undefined = publicMinters.pop();
-
-                        expect(publicMinterAccount).to.not.be.undefined;
-
-                        if (publicMinterAccount != undefined) {
-                            const publicMinterBalance: number =
-                                await archOfPeace.balanceOf(
-                                    publicMinterAccount.address
-                                );
-
-                            const publicPrice: BigNumber =
-                                await archOfPeace.currentDefaultPrice();
-
-                            publicMinter = {
-                                account: publicMinterAccount,
-                                status: {
-                                    balance: publicMinterBalance,
-                                    price: publicPrice,
-                                },
-                            };
-                        }
-                    };
-
-                    beforeEach(async () => {
-                        if (chapter.minting.limit > 0) {
-                            await getMinterSamples();
-                        }
-                    });
-
-                    it(`MUST actually be in Chapter "${chapter.label}"`, async () => {
-                        expect(await archOfPeace.currentChapter()).to.equal(
-                            hashStr(chapter.label)
-                        );
-                    });
-
-                    chapter.whitelisting
-                        ? it('MUST allow whitelisting', async () => {
-                              // TODO: check if whitelistRoot != 0 when transitioning
-                              await (
-                                  await archOfPeace.setWhitelistRoot(
-                                      whitelistRoot
-                                  )
-                              ).wait();
-                          })
-                        : it('MUST NOT allow whitelisting', async () =>
-                              await expect(
-                                  archOfPeace.setWhitelistRoot(whitelistRoot)
-                              ).to.be.revertedWith(
-                                  'MonuverseEpisode: whitelisting not allowed'
-                              ));
+                    
 
                     // TODO: regroup tests better and more efficiently
                     if (chapter.minting.limit > 0) {
@@ -1352,7 +1014,6 @@ describe('CONTRACT ArchOfPeace', () => {
                         }
                     });
                 });
-            });
 
             context(
                 `Final Chapter "${episode[episode.length - 1].label}"`,
@@ -1438,4 +1099,3 @@ describe('CONTRACT ArchOfPeace', () => {
             );
         });
     });
-});
