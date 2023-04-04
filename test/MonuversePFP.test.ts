@@ -145,34 +145,4 @@ describe("MonuversePFP", function () {
             expect(Math.max(...mappedMetadataIds)).to.equal(totalSupply - 1);
         });
     });
-
-
-
-    // describe("reveal", function () {
-    //     it("should request a random word", async function () {
-    //         await monuversePFP.reveal();
-    //         expect(await vrfCoordinatorV2Mock.fulfilling()).to.be.true;
-    //     });
-
-    //     it("should not allow revealing twice", async function () {
-    //         await monuversePFP.reveal();
-    //         await expect(monuversePFP.reveal()).to.be.revertedWith("MonuversePFP: already revealed");
-    //     });
-    // });
-
-    // describe("minting", function () {
-    //     beforeEach(async function () {
-    //         await monuversePFP.airdrop(await deployer.getAddress(), maxSupply);
-    //         await monuversePFP.reveal();
-    //     });
-
-    //     it("should allow minting before reveal", async function () {
-    //         await monuversePFP.airdrop(await attacker.getAddress(), 1);
-    //         expect(await monuversePFP.totalSupply()).to.equal(11);
-    //     });
-
-    //     it("should not allow minting after reveal", async function () {
-    //         await expect(monuversePFP.airdrop(await attacker.getAddress(), 1)).to.be.revertedWith("MonuversePFP: already revealed");
-    //     });
-    // });
 });

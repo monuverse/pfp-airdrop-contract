@@ -1,6 +1,6 @@
 import fs from 'fs';
 
-import { MAX_SUPPLY } from '../episode';
+const MAX_SUPPLY: number = 7777;
 
 const artworks: Array<string> = [''];
 const distr: Array<number> = [

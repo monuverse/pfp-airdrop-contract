@@ -891,10 +891,20 @@
   resolved "https://registry.yarnpkg.com/@openzeppelin/contracts-upgradeable/-/contracts-upgradeable-4.7.2.tgz#414096e21f048200cbb7ad4fe4c6de2e822513bf"
   integrity sha512-3dgc6qVmFch/uOmlmKnw5/v3JxwXcZD4T10/9CI1OUbX8AqjoZrBGKfxN1z3QxnIXRU/X31/BItJezJSDDTe7Q==
 
+"@openzeppelin/contracts-upgradeable@^4.8.0":
+  version "4.8.2"
+  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts-upgradeable/-/contracts-upgradeable-4.8.2.tgz#edef522bdbc46d478481391553bababdd2199e27"
+  integrity sha512-zIggnBwemUmmt9IS73qxi+tumALxCY4QEs3zLCII78k0Gfse2hAOdAkuAeLUzvWUpneMUfFE5sGHzEUSTvn4Ag==
+
 "@openzeppelin/contracts@^4.4.2", "@openzeppelin/contracts@^4.7.2":
   version "4.7.2"
   resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.7.2.tgz#7587416fe2d35abf574193515b8971bfe9f64bc7"
   integrity sha512-4n/JL9izql8303mPqPdubuna/DWEMbmOzWYUWyCPhjhiEr2w3nQrjE7vZz1fBF+wzzP6dZbIcsgqACk53c9FGA==
+
+"@openzeppelin/contracts@^4.7.3":
+  version "4.8.2"
+  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.8.2.tgz#d815ade0027b50beb9bcca67143c6bcc3e3923d6"
+  integrity sha512-kEUOgPQszC0fSYWpbh2kT94ltOJwj1qfT2DWo+zVttmGmf97JZ99LspePNaeeaLhCImaHVeBbjaQFZQn7+Zc5g==
 
 "@scure/base@~1.1.0":
   version "1.1.1"
@@ -4126,6 +4136,14 @@ onetime@^2.0.0:
   integrity sha512-oyyPpiMaKARvvcgip+JV+7zci5L8D1W9RZIz2l1o08AM3pfspitVWnPt3mzHcBPp12oYMTy0pqrFs/C+m3EwsQ==
   dependencies:
     mimic-fn "^1.0.0"
+
+operator-filter-registry@^1.4.1:
+  version "1.4.1"
+  resolved "https://registry.yarnpkg.com/operator-filter-registry/-/operator-filter-registry-1.4.1.tgz#724732ea7d2ec06107a7dabc16b90f8ff760be80"
+  integrity sha512-lF/6nkWqaKnoSISyF1FlyWCdsGH+mj1HKMwDxH1HcMDyJ8vHn3fJEh08VX1gT9D43eE1rY34zLRj3opt26YoMQ==
+  dependencies:
+    "@openzeppelin/contracts" "^4.7.3"
+    "@openzeppelin/contracts-upgradeable" "^4.8.0"
 
 optionator@^0.8.1, optionator@^0.8.2:
   version "0.8.3"

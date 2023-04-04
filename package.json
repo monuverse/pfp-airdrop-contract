@@ -38,6 +38,7 @@
     "dependencies": {
         "@chainlink/contracts": "^0.4.2",
         "@openzeppelin/contracts": "^4.7.2",
-        "merkletreejs": "^0.2.32"
+        "merkletreejs": "^0.2.32",
+        "operator-filter-registry": "^1.4.1"
     }
 }

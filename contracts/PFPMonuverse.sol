@@ -3,6 +3,7 @@ pragma solidity 0.8.17;
 
 import "erc721psi/contracts/extension/ERC721PsiBurnable.sol";
 import "./ArchOfPeaceEntropy.sol";
+import "operator-filter-registry/src/DefaultOperatorFilterer.sol";
 
 import "fpe-map/contracts/FPEMap.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
@@ -44,7 +45,7 @@ import "@openzeppelin/contracts/utils/Strings.sol";
  * @notice PFP Monuverse Airdrop Contract with
  * @notice O(1) fully decentralized and unpredictable reveal.
  */
-contract MonuversePFP is ArchOfPeaceEntropy, ERC721PsiBurnable {
+contract MonuversePFP is ArchOfPeaceEntropy, ERC721PsiBurnable, DefaultOperatorFilterer {
     using FPEMap for uint256;
     using Strings for uint256;
 
@@ -138,5 +139,44 @@ contract MonuversePFP is ArchOfPeaceEntropy, ERC721PsiBurnable {
         }
 
         return metadataURI;
+    }
+
+    function setApprovalForAll(
+        address operator,
+        bool approved
+    ) public override onlyAllowedOperatorApproval(operator) {
+        super.setApprovalForAll(operator, approved);
+    }
+
+    function approve(
+        address operator,
+        uint256 tokenId
+    ) public override onlyAllowedOperatorApproval(operator) {
+        super.approve(operator, tokenId);
+    }
+
+    function transferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public override onlyAllowedOperator(from) {
+        super.transferFrom(from, to, tokenId);
+    }
+
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public override onlyAllowedOperator(from) {
+        super.safeTransferFrom(from, to, tokenId);
+    }
+
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 tokenId,
+        bytes memory data
+    ) public override onlyAllowedOperator(from) {
+        super.safeTransferFrom(from, to, tokenId, data);
     }
 }
